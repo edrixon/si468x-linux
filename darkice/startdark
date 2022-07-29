@@ -1,1 +1,4 @@
+#!/bin/sh
+
+darkice -c ~/dab/darkice/darkice.cfg
 
