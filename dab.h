@@ -11,7 +11,7 @@
 #define SPI_CHANNEL 0
 #define SPI_BUFF_SIZE 768
 
-#define DAB_DEFAULT_FREQ 0
+#define DAB_DEFAULT_FREQ 1
 #define DAB_DEFAULT_SERVICE_ID 0xc224
 #define DAB_DEFAULT_COMP_ID 0x20004
 #define DAB_LAST_SERVICE "dablast.dat"
@@ -31,7 +31,8 @@ void dabGetDigRadioStatus();
 void dabGetEnsembleInfo(void);
 void dabShowEnsemble();
 void dabGetRssi();
-void dabGetAudioInfo();
+void dabGetAudioLevel();
+void dabGetChannelInfo(DABService *service);
 void dabGetSubChannelInfo(uint32_t serviceID, uint32_t compID,
                                                      channelInfoType *cInfo);
 void dabShowSubChannelInfo(channelInfoType *cInfo);
@@ -44,10 +45,12 @@ void dabCommand();
 void dabGetTime();
 void dabShowTime();
 void dabHandleTimers();
+void dabGetAcfStatus();
 void dabShowSignal();
 void dabShowServiceSummary();
 void dabShowState();
 void dabTune(DABService *service);
+void dabTuneFreq(DABService *service);
 void dabMain();
 
 #endif

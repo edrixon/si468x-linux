@@ -78,11 +78,18 @@ int main(int argc, char *arv[])
 {
     int c;
 
+    printf("\n");
+    printf("DAB receiver control engine version 1.0\n");
+    printf("\n");
+
     shmBegin();
     for(c = 0; c < dab_freqs; c++)
     {
-        dabShMem -> dabFreq[c] = dab_freq[c];
+        dabShMem -> dabFreq[c].freq = dab_freq[c];
+        dabShMem -> dabFreq[c].serviceValid = TRUE;
+        strcpy(dabShMem -> dabFreq[c].ensemble, "unknown");
     }
+    dabShMem -> dabFreqs = dab_freqs;
 
     dabShMem -> dabCmd.cmd = DABCMD_NONE;
     dabShMem -> dabCmd.rtn = DABRET_READY;

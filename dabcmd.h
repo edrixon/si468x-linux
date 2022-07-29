@@ -6,6 +6,8 @@
 #define DABCMD_TUNE              0x1001
 #define DABCMD_START_SERVICE     0x1002
 #define DABCMD_GETCHANNEL_INFO   0x1003
+#define DABCMD_TUNEFREQ          0x1004
+#define DABCMD_SAVE              0x1005
 #define DABCMD_EXIT              0x1099
 
 #define DABRET_READY             0x0000

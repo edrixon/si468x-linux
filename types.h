@@ -2,6 +2,9 @@
 
 #define __GOT_TYPES
 
+#include <semaphore.h>
+#include <time.h>
+
 #define DAB_MAX_FREQS    80
 #define DAB_MAX_SERVICES 16
 #define DAB_MAX_SERVICEDATA_LEN 128
@@ -15,7 +18,16 @@ typedef struct dabTimerType
     int enabled;
 } dabTimerType;
 
+#define TRUE 1
+#define FALSE 0
 typedef unsigned char boolean;
+
+typedef struct
+{
+    unsigned int freq;
+    char ensemble[17];
+    boolean serviceValid;
+} dabFreqType;
 
 typedef struct
 {
@@ -27,27 +39,27 @@ typedef struct
 
 typedef struct
 {
-    uint8_t   Freq;
-    uint32_t  ServiceID;
-    uint32_t  CompID;
-    char      Label[17];
+    unsigned char Freq;
+    unsigned int  ServiceID;
+    unsigned int  CompID;
+    char          Label[17];
 } DABService;
 
 typedef struct
 {
-    uint32_t serviceID;
-    uint32_t compID;
-    uint8_t serviceMode;
-    uint8_t protectionInfo;
-    uint16_t bitRate;
-    uint16_t numCu;
-    uint16_t cuAddr;
+    unsigned int serviceID;
+    unsigned int compID;
+    unsigned char serviceMode;
+    unsigned char  protectionInfo;
+    unsigned short int bitRate;
+    unsigned short int numCu;
+    unsigned short int cuAddr;
 } channelInfoType;
 
 typedef struct
 {
-    uint16_t bitRate;
-    uint16_t sampleRate;
+    unsigned short int bitRate;
+    unsigned short int sampleRate;
     int mode;
     int drcGain;
 } audioInfoType;
@@ -64,7 +76,7 @@ typedef union
 
 typedef struct
 {
-    unsigned long int userPid;
+    long int userPid;
     int cmd;
     int rtn;
     paramType params;
@@ -76,8 +88,8 @@ typedef struct
     int snr;
     int ficQuality;
     int cnr;
-    uint16_t fibErrorCount;
-    uint16_t cuCount;
+    unsigned short int fibErrorCount;
+    unsigned short int cuCount;
 } sigQualityType;
 
 typedef struct
@@ -85,6 +97,8 @@ typedef struct
     sem_t semaphore;
     sysInfoType sysInfo;
     int dabServiceValid;
+    double audioLevel;
+    unsigned int audioLevelRaw;
     struct tm time;
     DABService currentService;
     audioInfoType audioInfo;
@@ -95,7 +109,7 @@ typedef struct
     unsigned long int serviceDataMs;
     char serviceData[DAB_MAX_SERVICEDATA_LEN];
     int dabFreqs;
-    uint32_t dabFreq[DAB_MAX_FREQS];
+    dabFreqType dabFreq[DAB_MAX_FREQS];
     dabCmdType dabCmd;
     dabCmdRespType dabResp;
 } dabShMemType;

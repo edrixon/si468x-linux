@@ -286,6 +286,23 @@ void siDabTuneFreq(uint8_t freq_index)
 	while ((spiBuf[1] & 0x01) == 0); //STCINT
 }
 
+void siStopDigitalService(uint32_t serviceID, uint32_t compID)
+{
+    spiBuf[0] = SI46XX_DAB_START_DIGITAL_SERVICE;
+    spiBuf[1] = 0x00; // Audio service, 1 is data service
+    spiBuf[2] = 0x00;
+    spiBuf[3] = 0x00;
+    spiBuf[4] = serviceID & 0xff;
+    spiBuf[5] = (serviceID >> 8) & 0xff;
+    spiBuf[6] = (serviceID >> 16) & 0xff;
+    spiBuf[7] = (serviceID >> 24) & 0xff;
+    spiBuf[8] = compID & 0xff;
+    spiBuf[9] = (compID >> 8) & 0xff;
+    spiBuf[10] = (compID >> 16) & 0xff;
+    spiBuf[11] = (compID >> 24) & 0xff;
+    siWrite(12);
+    siCts();
+}
 void siStartDigitalService(uint32_t serviceID, uint32_t compID)
 {
     int c;
@@ -396,6 +413,14 @@ void siGetTime(void)
 void siDabGetEventStatus(void)
 {
 	spiBuf[0] = SI46XX_DAB_GET_EVENT_STATUS;
+	spiBuf[1] = 0x00;
+	siWrite(2);
+	siCts();
+}
+
+void siDabGetAcfStatus(void)
+{
+	spiBuf[0] = SI46XX_DAB_GET_ACF_STATUS;
 	spiBuf[1] = 0x00;
 	siWrite(2);
 	siCts();

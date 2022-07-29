@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <semaphore.h>
+#include <math.h>
 
 #include <pigpio.h>
 
@@ -21,9 +22,6 @@
 
 unsigned int spi;
 unsigned char spiBuf[SPI_BUFF_SIZE];
-
-#define true 0
-#define false 1
 
 void dabGetDigRadioStatus(void);
 void dabGetRssi(void);
@@ -48,7 +46,7 @@ uint32_t dab_freq[] =
 
 uint32_t dab_freq[] =
 {
-           225648 
+           223936, 225648, 227360, 229072, 230748, 232496, 234208
 };
 
 #endif
@@ -57,11 +55,11 @@ int dab_freqs = (sizeof(dab_freq) / sizeof(dab_freq[0]));
 
 dabTimerType dabTimers[] = 
 {
-    { DAB_RSSI_TICKS, DAB_RSSI_TICKS, dabGetDigRadioStatus, "RSSI", true },
-    { DAB_TIME_TICKS, DAB_TIME_TICKS, dabGetTime, "TIME", true },
-    { DAB_SHOWTIME_TICKS, DAB_SHOWTIME_TICKS, dabShowTime, "SHOWTIME", true },
-    { DAB_SHOWSERV_TICKS, DAB_SHOWSERV_TICKS, dabShowServiceSummary, "SHOWSERV", true },
-    { DAB_SHOWSIG_TICKS, DAB_SHOWSIG_TICKS, dabShowSignal, "SHOWSIG", true }
+    { DAB_RSSI_TICKS, DAB_RSSI_TICKS, dabGetDigRadioStatus, "RSSI", TRUE },
+    { DAB_TIME_TICKS, DAB_TIME_TICKS, dabGetTime, "TIME", TRUE },
+    { DAB_SHOWTIME_TICKS, DAB_SHOWTIME_TICKS, dabShowTime, "SHOWTIME", TRUE },
+    { DAB_SHOWSERV_TICKS, DAB_SHOWSERV_TICKS, dabShowServiceSummary, "SHOWSERV", TRUE },
+    { DAB_SHOWSIG_TICKS, DAB_SHOWSIG_TICKS, dabShowSignal, "SHOWSIG", TRUE }
 };
 
 #define DAB_MAXTIMERS (sizeof(dabTimers) / sizeof(dabTimerType))
@@ -74,20 +72,34 @@ int dabDone;
 
 boolean dabServiceValid(void)
 {
-	siDabDigRadStatus();
-	siResponseN(23);
+    dabFreqType *dFreq;
 
-	if(((spiBuf[6] & 0x01) == 0x01) &&
-                                        (spiBuf[7] > 0x20) && (spiBuf[9] > 25))
-	{
-		dabShMem -> dabServiceValid = true;
-	}
-	else
-	{
-		dabShMem -> dabServiceValid = false;
-	}
+    siDabDigRadStatus();
+    siResponseN(23);
 
-        return dabShMem -> dabServiceValid;
+    dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
+
+    if(((spiBuf[6] & 0x01) == 0x01) && (spiBuf[7] > 0x20) && (spiBuf[9] > 25))
+    {
+        dFreq -> serviceValid = TRUE;
+        strcpy(dFreq -> ensemble, dabShMem -> Ensemble);
+
+        dabShMem -> dabServiceValid = TRUE;
+    }
+    else
+    {
+        sprintf(dabShMem -> Ensemble, "No service");
+        dabShMem -> numberofservices = 0;
+
+        bzero(&(dabShMem -> service[0]),
+                                       sizeof(DABService) * DAB_MAX_SERVICES);
+
+        strcpy(dFreq -> ensemble, "No service");
+        dFreq -> serviceValid = FALSE;
+        dabShMem -> dabServiceValid = FALSE;
+    }
+
+    return dabShMem -> dabServiceValid;
 }
 
 void dabWaitServiceList(void)
@@ -178,13 +190,23 @@ void dabGetDigRadioStatus()
     dabGetRssi();
 }
 
+void dabGetAcfStatus()
+{
+    siDabGetAcfStatus();
+    siResponseN(12);
+
+    dabShMem -> audioLevelRaw = spiBytesTo16(&spiBuf[7]);
+    dabShMem -> audioLevel =
+                          20 * log((double)(dabShMem -> audioLevelRaw) / 16383.0);
+}
+
 void dabGetEnsembleInfo(void)
 {
 	uint8_t i;
 
 	siDabDigRadStatus();
 	siResponseN(23);
-	if (dabServiceValid() == true)
+	if (dabServiceValid() == TRUE)
 	{
 		dabWaitServiceList();
 
@@ -207,7 +229,7 @@ void dabGetEnsembleInfo(void)
 	}
 	else
 	{
-		//No services
+            //No services
 	}
 }
 
@@ -248,6 +270,14 @@ void dabGetAudioInfo()
     dabShMem -> audioInfo.drcGain = spiBuf[10];
 }
 
+void dabGetChannelInfo(DABService *service)
+{
+
+    dabGetSubChannelInfo(service -> ServiceID, service -> CompID, &(dabShMem -> dabResp.channelInfo));
+
+//    dabShowSubChannelInfo(&(dabShMem -> dabResp.channelInfo));
+}
+
 void dabGetSubChannelInfo(uint32_t serviceID, uint32_t compID,
                                                         channelInfoType *cInfo)
 {
@@ -277,7 +307,22 @@ void dabShowSubChannelInfo(channelInfoType *cInfo)
 void dabStartDigitalService(uint32_t serviceID, uint32_t compID)
 {
     siStartDigitalService(serviceID, compID);
+    sleep(1); 
     dabGetAudioInfo();
+}
+
+
+void dabStopCurrentDigitalService()
+{
+    if(dabShMem -> currentService.ServiceID != 0)
+    {
+        siStopDigitalService(dabShMem -> currentService.ServiceID,
+                                            dabShMem -> currentService.CompID);
+
+        bzero(&(dabShMem -> currentService), sizeof(DABService));
+        bzero(&(dabShMem -> audioInfo), sizeof(audioInfoType));
+        bzero(&(dabShMem -> time), sizeof(struct tm));
+    }
 }
 
 void dabSaveLastService()
@@ -309,6 +354,8 @@ void dabGetLastService(DABService *lastService)
         printf("Using settings from last time\n");
         read(fd, lastService, sizeof(DABService));
     }
+
+    printf("Service ID: 0x%08x  Component ID: 0x%08x\n", lastService -> ServiceID, lastService -> CompID);
     close(fd);
 }
 
@@ -390,31 +437,42 @@ void dabCommand()
     {
         dabShMem -> dabCmd.rtn = DABRET_BUSY;
 
-        printf("Command %d received from PID - %ld\n",
+        printf("Command 0x%04x received from PID - %ld\n",
                            dabShMem -> dabCmd.cmd, dabShMem -> dabCmd.userPid);
 
         switch(dabShMem -> dabCmd.cmd)
         {
             case DABCMD_TUNE:
-               printf("Tune\n");
+               printf("  ** Change service\n");
                dabTune(&(dabShMem -> dabCmd.params.service));
                break;
 
+            case DABCMD_TUNEFREQ:
+               printf("  ** Change frequency\n");
+               dabTuneFreq(&(dabShMem -> dabCmd.params.service));
+               break;
+
             case DABCMD_START_SERVICE:
-               printf("Start\n");
+               printf("  ** Start service\n");
                break;
 
             case DABCMD_GETCHANNEL_INFO:
-               printf("Get info\n");
+               printf("  **Get sub-channel information\n");
+               dabGetChannelInfo(&(dabShMem -> dabCmd.params.service));
+               break;
+
+            case DABCMD_SAVE:
+               printf("  **Save current service\n");
+               dabSaveLastService();
                break;
 
             case DABCMD_EXIT:
-               printf("Exit\n");
-               dabDone = true;
+               printf("  **Exit\n");
+               dabDone = TRUE;
                break;
 
             default:
-               printf("Illegal command - %d\n", dabShMem -> dabCmd.cmd);
+               printf("  **Illegal command\n");
         }
 
         dabShMem -> dabCmd.userPid = 0;
@@ -454,7 +512,7 @@ void dabHandleTimers()
     for(c = 0; c < DAB_MAXTIMERS; c++)
     {
 //        printf("Timer task - %s\n", dabTimers[c].name);
-        if(dabTimers[c].enabled == true)
+        if(dabTimers[c].enabled == TRUE)
         {
             if(dabTimers[c].count)
             {
@@ -514,61 +572,50 @@ void dabShowState()
     printf("  Mode: %d\n", dabShMem -> audioInfo.mode);
 }
 
-void dabTune(DABService *service)
+void dabTuneFreq(DABService *service)
 {
+    dabStopCurrentDigitalService();
     siDabTuneFreq(service -> Freq);
-    if(dabServiceValid() == true)
+    if(dabServiceValid() == TRUE)
     {
         dabGetEnsembleInfo();
-        dabGetRssi();
-        dabStartDigitalService(service -> ServiceID, service -> CompID);
         dabGetDigRadioStatus();
+    }
+}
 
-        printf("  Changed service\n");
-        dabShowServiceSummary();
-    } 
+void dabTune(DABService *service)
+{
+    dabGetEnsembleInfo();
+    dabGetRssi();
+    dabStartDigitalService(service -> ServiceID, service -> CompID);
+    dabGetDigRadioStatus();
+
+    dabShowServiceSummary();
 }
 
 void dabMain()
 {
-    channelInfoType cInfo;
     DABService lastService;
 
     dabGetLastService(&lastService);
 
-    siDabTuneFreq(lastService.Freq);
-    if(dabServiceValid() == true)
+    dabTuneFreq(&lastService);
+    if(dabServiceValid() == TRUE)
     {
-        dabGetEnsembleInfo();
-        dabShowEnsemble();
-
-        dabGetRssi();
-
-        dabStartDigitalService(lastService.ServiceID, lastService.CompID);
-
-        dabGetSubChannelInfo(dabShMem -> currentService.ServiceID,
-                                    dabShMem -> currentService.CompID, &cInfo);
-        dabGetDigRadioStatus();
-
-        dabShowState();
-        dabShowSubChannelInfo(&cInfo);
-
-        printf("Ready...\n");
-
-        dabDone = false;
-        while(dabDone == false)
-        {
-            dabCommand();
-
-            if(dabDone == false)
-            {
-                dabHandleTimers();
-                milliSleep(DAB_TICKTIME);
-            }
-        }
+        dabTune(&lastService);
     }
-    else
+
+    printf("Ready...\n");
+
+    dabDone = FALSE;
+    while(dabDone == FALSE)
     {
-        printf("No DAB service\n");
+        dabCommand();
+
+        if(dabDone == FALSE)
+        {
+            dabHandleTimers();
+            milliSleep(DAB_TICKTIME);
+        }
     }
 }

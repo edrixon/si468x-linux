@@ -36,6 +36,9 @@
 #define SI46XX_DAB_GET_ENSEMBLE_INFO 			0xB4
 #define SI46XX_GET_TIME					0xBC
 #define SI46XX_DAB_GET_AUDIO_INFO 			0xBD
+
+#define SI46XX_DAB_GET_ACF_STATUS                       0xC2
+
 #define SI46XX_DAB_GET_SUBCHAN_INFO 			0xBE
 #define SI46XX_DAB_GET_RSSI                             0xE5
 
@@ -55,6 +58,7 @@ void siBoot();
 void siSetFreqList();
 void siDabTuneFreq(uint8_t freq_index);
 void siStartDigitalService(uint32_t serviceID, uint32_t compID);
+void siStopDigitalService(uint32_t serviceID, uint32_t compID);
 void siDabGetEnsembleInfo(void);
 void siDabGetSubChannelInfo(uint32_t serviceID, uint32_t compID);
 void siDabGetAudioInfo(void);
@@ -62,6 +66,7 @@ void siDabDigRadStatus(void);
 void siGetDigitalServiceData(void);
 void siGetRssi(void);
 void siGetTime(void);
+void siDabGetAcfStatus(void);
 void siDabGetEventStatus(void);
 void siGetDigitalServiceList(void);
 void siInitDab();
