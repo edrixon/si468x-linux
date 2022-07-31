@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <semaphore.h>
+#include <signal.h>
 
 #define __IN_MAIN
 
@@ -74,12 +75,20 @@ extern unsigned char spiBuf[];
 extern int dab_freqs;
 extern uint32_t dab_freq[];
 
+void dabSigint(int signum)
+{
+    dabShMem -> engineVersion = 0;
+    exit(0);
+}
+
 int main(int argc, char *arv[])
 {
     int c;
+    struct sigaction sigintAction;
 
     printf("\n");
-    printf("DAB receiver control engine version 1.0\n");
+    printf("DAB receiver control engine version %d.%d\n",
+              (DAB_ENGINE_VERSION & 0xff00) >> 8, DAB_ENGINE_VERSION & 0x00ff);
     printf("\n");
 
     shmBegin();
@@ -94,6 +103,8 @@ int main(int argc, char *arv[])
     dabShMem -> dabCmd.cmd = DABCMD_NONE;
     dabShMem -> dabCmd.rtn = DABRET_READY;
 
+    dabShMem -> engineVersion = DAB_ENGINE_VERSION;
+
     sem_init(&(dabShMem -> semaphore), 99, 1);
 
     gpioInitialise();
@@ -105,11 +116,17 @@ int main(int argc, char *arv[])
 
     gpioSetAlertFunc(DAB_INT_PIN, dabInterrupt);
 
-    spi = spiOpen(SPI_CHANNEL, SPI_SPEED, SPI_FLAGS);
+    spi = spiOpen(SPI_SI_CHANNEL, SPI_SPEED, SPI_FLAGS);
     if(spi < 0)
     {
-        printf("Error: opening SPI port\n");
+        printf("Error: opening SPI port for Si468x\n");
     }
+
+
+    sigintAction.sa_handler = dabSigint;
+    sigemptyset(&sigintAction.sa_mask);
+    sigintAction.sa_flags = 0;
+    sigaction(SIGINT, &sigintAction, NULL);
 
     dabBegin();
 

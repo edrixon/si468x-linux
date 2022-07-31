@@ -30,7 +30,7 @@ void dabShowTime(void);
 void dabShowSignal(void);
 void dabShowServiceSummary(void);
 
-#ifdef __ALL_CHANNELS
+#ifdef DAB_USE_ALL_CHANNELS
 
 uint32_t dab_freq[] =
 {

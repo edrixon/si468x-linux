@@ -94,6 +94,7 @@ typedef struct
 
 typedef struct
 {
+    int engineVersion;
     sem_t semaphore;
     sysInfoType sysInfo;
     int dabServiceValid;

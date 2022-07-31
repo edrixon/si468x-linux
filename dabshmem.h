@@ -2,7 +2,7 @@
 
 #define __GOT_DABSHMEM
 
-#define DAB_SHMEM_NAME "/tmp/dab-shared"
+#define DAB_SHMEM_NAME "/dev/shm/dab-shared"
 
 #endif
 
