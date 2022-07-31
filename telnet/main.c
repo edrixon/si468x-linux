@@ -27,7 +27,13 @@ extern char cliBuffer[];
 
 int main(int argc, char *argv[])
 {
+    printf("\nRemote DAB receiver telnet server V1.0\n");
+
     dabShMem = shmAttach();
+    printf("  Radio is Si%d\n", dabShMem -> sysInfo.partNo);
+    printf("  Control engine is version %d.%d\n",
+                            (dabShMem -> engineVersion & 0xff00) >> 8,
+                             dabShMem -> engineVersion & 0x00ff);
 
     telnetd();
 }

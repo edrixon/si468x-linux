@@ -16,6 +16,18 @@ char *aMode[] =
     "dual", "mono", "stereo", "joint stereo"
 };
 
+void cmdVersion(char *pPtr)
+{
+    int major;
+    int minor;
+
+    major = (dabShMem -> engineVersion & 0xff00) >> 8;
+    minor = dabShMem -> engineVersion & 0x00ff;
+
+    sprintf(pBuf, "  Engine version: %d.%d\n", major, minor);
+    tputs(pBuf);
+}
+
 void cmdSave(char *pPtr)
 {
     dabCmdType dabCmd;
@@ -219,12 +231,14 @@ void cmdTune(char *pPtr)
     {
         f = (double)dabShMem -> dabFreq[dabShMem -> currentService.Freq].freq / 1000.0;
 
-        sprintf(pBuf, "  Frequency: %3.3lf MHz  Service: %s, %s (0x%08x/0x%08x)\n",
-                                       f,
-                                       dabShMem -> Ensemble,
-                                       dabShMem -> currentService.Label,
+        sprintf(pBuf, "  Frequency: %3.3lf MHz - %s\n",
+                                                      f, dabShMem -> Ensemble);
+        tputs(pBuf);
+
+        sprintf(pBuf, "  Service ID: 0x%08x  Component ID: 0x%08x - %s\n",
                                        dabShMem -> currentService.ServiceID,
-                                       dabShMem -> currentService.CompID);
+                                       dabShMem -> currentService.CompID,
+                                       dabShMem -> currentService.Label);
         tputs(pBuf);
 
     }

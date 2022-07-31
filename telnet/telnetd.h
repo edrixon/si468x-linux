@@ -7,6 +7,7 @@ int tgets();
 void telnetd();
 
 #define TELNETD_PORT 5000
+#define TELNETD_MAXCONNECTIONS 2
 
 #endif
 

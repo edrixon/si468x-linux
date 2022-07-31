@@ -7,8 +7,13 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <ctype.h>
 #include <errno.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <time.h>
+
 
 #include "../types.h"
 #include "../dabshmem.h"
@@ -16,10 +21,16 @@
 #include "telnetd.h"
 
 int connFd;
+int listenFd;
+int telnetdConnections;
+pid_t telnetdPid;
+
+time_t lastTime;
 
 extern char pBuf[];
 extern char cliBuffer[];
 extern int cliDone;
+extern int cliTimeout;
 
 void tputs(char *str)
 {
@@ -45,42 +56,71 @@ int tgets(char *str)
     unsigned char inchar;
     int done;
     int charsRead;
+    fd_set set;
+    int rv;
+    struct timeval timeout;
+
+    FD_ZERO(&set);
+    FD_SET(connFd, &set);
+
 
     done = FALSE;
     charsRead = 0;
     do
     {
-        if(read(connFd, &inchar, 1) != 1)
+        timeout.tv_sec = cliTimeout;
+        timeout.tv_usec = 0;
+        rv = select(connFd + 1, &set, NULL, NULL, &timeout);
+        if(rv == -1)
         {
-            done = TRUE;
+            perror("select");
             charsRead = -1;
+            done = TRUE;
         }
         else
         {
-            if(isprint(inchar) && charsRead < 80)
+            if(rv == 0)
             {
-                *str = inchar;
-                str++;
-                charsRead++;
+                // timeout
+                tputs("\nIdle timeout\n");
+                done = TRUE;
+                charsRead = -1;
             }
             else
             {
-                switch(inchar)
+                if(read(connFd, &inchar, 1) != 1)
                 {
-                    case '\n':
-                        *str = '\0';
-                        done = TRUE;
-                        break;
-
-                    case 0x08:
-                        if(charsRead > 0)
+                    done = TRUE;
+                    charsRead = -1;
+                }
+                else
+                {
+                    if(isprint(inchar) && charsRead < 80)
+                    {
+                        *str = inchar;
+                        str++;
+                        charsRead++;
+                    }
+                    else
+                    {
+                        switch(inchar)
                         {
-                            charsRead--;
-                            str--;
-                        }
-                        break;
+                            case '\n':
+                                *str = '\0';
+                                done = TRUE;
+                                break;
 
-                    default:;
+                            case 0x08:
+                                if(charsRead > 0)
+                                {
+                                    charsRead--;
+                                    str--;
+                                }
+                                break;
+
+                            default:;
+                        }
+                    }
                 }
             }
         }
@@ -100,21 +140,128 @@ void getAsciiTime(char *buf)
     strftime(buf, 80, "%d %B %Y, %H:%M:%S", localTimeTm);
 }
 
+void telnetdSigint(int signum)
+{
+    pid_t myPid;
+
+    myPid = getpid();
+
+    if(myPid == telnetdPid)
+    {
+        printf("Telnet server exiting on SIGINT\n");
+    }
+    else
+    {
+        printf("Client handler exiting on SIGINT\n");
+    }
+    close(listenFd);
+    exit(0);
+}
+
+void telnetdSigchld(int signum)
+{
+    if(telnetdConnections)
+    {
+        telnetdConnections--;
+    }    
+
+//    while(waitpid(-1, NULL, 0) > 0);
+
+    getAsciiTime(pBuf);
+    printf("[%s] Disconnected (remaining connections %d)\n",
+                                                     pBuf, telnetdConnections);
+}
+
+void telnetdSession()
+{
+    sprintf(pBuf, "%s\n", CLIHELLO);
+    tputs(pBuf);
+
+    cliTimeout = CLITIMEOUT;
+    sprintf(pBuf, "CLI timeout is %d seconds\n", cliTimeout); 
+    tputs(pBuf);
+
+    cliDone = FALSE;
+    while(cliDone == FALSE)
+    {
+        lastTime = time(NULL);
+
+        sprintf(pBuf, "%s ", CLIPROMPT);
+        tputs(pBuf);
+        if(tgets(cliBuffer) == -1)
+        {
+            cliDone = TRUE;
+        }
+        else
+        {
+            doCliCommand();
+        }
+    }
+}
+
+void telnetdChild()
+{
+    close(listenFd);
+
+    sprintf(pBuf, "Remote DAB receiver V1.0, radio is Si%d\n\n",
+                                               dabShMem -> sysInfo.partNo);
+    tputs(pBuf);
+
+    if(telnetdConnections >= TELNETD_MAXCONNECTIONS)
+    {
+        tputs("Too many telnet connections!\n");
+    }
+    else
+    {
+        telnetdSession();                        
+    }
+
+    close(connFd);
+    exit(0);
+}
+
+void telnetdConnection(pid_t childPid, struct sockaddr_in *clientAddr)
+{
+    close(connFd);
+    telnetdConnections++;
+
+    getAsciiTime(pBuf);
+    printf("[%s] Connected to client %s (port %d)\n",
+                                     pBuf,
+                                     inet_ntoa(clientAddr -> sin_addr),
+                                     ntohs(clientAddr -> sin_port));
+    printf("[%s] Spawned process %d (connection %d)\n",
+                                     pBuf,
+                                     childPid, telnetdConnections);
+}
+
 void telnetd()
 {
-    int listenFd;
     struct sockaddr_in servAddr;
     struct sockaddr_in clientAddr;
     socklen_t addrLen;
-    int telnetDone;
+    struct sigaction sigintAction;
+    pid_t telnetdChildPid;
+
+    telnetdPid = getpid();
 
     listenFd = socket(AF_INET, SOCK_STREAM, 0);
     if(listenFd < 0)
     {
-        perror("socket: ");
+        perror("socket");
     }
     else
     {
+        sigintAction.sa_handler = telnetdSigint;
+        sigemptyset(&sigintAction.sa_mask);
+        sigintAction.sa_flags = 0;
+        sigaction(SIGINT, &sigintAction, NULL);
+
+        sigintAction.sa_handler = telnetdSigchld;
+        sigemptyset(&sigintAction.sa_mask);
+        sigintAction.sa_flags = 0;
+        sigaction(SIGCHLD, &sigintAction, NULL);
+
         bzero(&servAddr, sizeof(servAddr));
 
         servAddr.sin_family = AF_INET;
@@ -123,54 +270,41 @@ void telnetd()
 
         if(bind(listenFd, (struct sockaddr*)&servAddr, sizeof(servAddr)) < 0)
         {
-            perror("bind: ");
+            perror("bind");
         }
         else
         {
-            if(listen(listenFd, 10) < 0)
+            if(listen(listenFd, 5) < 0)
             {
-                perror("listen: ");
+                perror("listen");
             }
             else
             {
-                printf("Telnet server ready on port %d\n", TELNETD_PORT);
+                printf("  Ready on port %d...\n\n", TELNETD_PORT);
 
-                telnetDone = FALSE;
-                while(telnetDone == FALSE)
+                telnetdConnections = 0;
+                addrLen = sizeof(struct sockaddr);
+                while(1)
                 {
-                    addrLen = sizeof(struct sockaddr);
-                    connFd = accept(listenFd, (struct sockaddr *)&clientAddr, &addrLen);
+                    connFd = accept(listenFd,
+                                     (struct sockaddr *)&clientAddr, &addrLen);
 
-                    getAsciiTime(pBuf);
-                    printf("[%s] Connected to client %s (port %d)\n", pBuf,
-                                       inet_ntoa(clientAddr.sin_addr),
-                                       ntohs(clientAddr.sin_port));
-
-                    sprintf(pBuf, "Remote DAB receiver V1.0, radio is Si%d\n\n",
-                                                   dabShMem -> sysInfo.partNo);
-                    tputs(pBuf);
-
-                    sprintf(pBuf, "%s\n", CLIHELLO);
-                    tputs(pBuf);
-                    cliDone = FALSE;
-                    while(cliDone == FALSE)
+                    if(connFd < 0)
                     {
-                        sprintf(pBuf, "%s ", CLIPROMPT);
-                        tputs(pBuf);
-                        if(tgets(cliBuffer) == -1)
+//                        perror("accept");
+                    }
+                    else
+                    {
+                        telnetdChildPid = fork();
+                        if(telnetdChildPid == 0)
                         {
-                            cliDone = TRUE;
+                            telnetdChild();
                         }
                         else
                         {
-                            doCliCommand();
+                            telnetdConnection(telnetdChildPid, &clientAddr);
                         }
                     }
-
-                    getAsciiTime(pBuf);
-                    printf("[%s] Disconnected\n", pBuf);
-
-                    close(connFd);
                 }
             }
         }

@@ -12,5 +12,6 @@ void cmdFreq(char *);
 void cmdGetChannelInfo(char *);
 void cmdAudioInfo(char *);
 void cmdSave(char *);
+void cmdVersion(char *);
 
 #endif

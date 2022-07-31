@@ -25,6 +25,7 @@ char cliBuffer[80];
 char *cliPtr;
 int charsAvailable;
 int cliDone;
+int cliTimeout;
 
 CLICOMMAND cliCmd[] =
 {
@@ -39,9 +40,28 @@ CLICOMMAND cliCmd[] =
     { "scan", "", cmdScan },
     { "service", "service [<service ID> <component ID>]", cmdTune },
     { "time", "", cmdTime },
+    { "tout", "tout [<new value>]", cmdTimeout },
+    { "ver", "", cmdVersion },
     { "?", "", helpCmd },
     { "", "", NULL }
 };
+
+void cmdTimeout(char *p)
+{
+    if(*p == '\0')
+    {
+        sprintf(pBuf, "CLI timeout: %d seconds\n", cliTimeout);;
+        tputs(pBuf);
+    }
+    else
+    {
+        cliTimeout = atoi(p);
+        if(cliTimeout < CLIMINTIMEOUT)
+        {
+            cliTimeout = CLIMINTIMEOUT;
+        }
+    }
+}
 
 void helpCmd(char *p)
 {
