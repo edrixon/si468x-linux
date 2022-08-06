@@ -431,6 +431,18 @@ void dabBegin()
                    dabShMem -> sysInfo.romID, dabShMem -> sysInfo.activeImage);
 }
 
+void dabResetRadio()
+{
+    DABService currentService;
+
+    bcopy(&(dabShMem -> currentService), &currentService, sizeof(DABService));
+
+    dabBegin();
+    dabTuneFreq(&currentService);
+    dabTune(&currentService);
+
+}
+
 void dabCommand()
 {
     if(dabShMem -> dabCmd.cmd != DABCMD_NONE)
@@ -464,6 +476,11 @@ void dabCommand()
             case DABCMD_SAVE:
                printf("  **Save current service\n");
                dabSaveLastService();
+               break;
+
+            case DABCMD_RESET:
+               printf("  **Reset radio\n");
+               dabResetRadio();
                break;
 
             case DABCMD_EXIT:

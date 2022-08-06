@@ -1,0 +1,8 @@
+#!/bin/sh
+
+DABPROCS="dab telnetd darkice icecast"
+
+for p in $DABPROCS
+do
+    ps -e opid,cputime,args | grep $p | grep -v grep
+done
