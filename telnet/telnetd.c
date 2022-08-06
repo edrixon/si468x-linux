@@ -19,11 +19,14 @@
 #include "../dabshmem.h"
 #include "cli.h"
 #include "telnetd.h"
+#include "commands.h"
 
 int connFd;
 int listenFd;
 int telnetdConnections;
 pid_t telnetdPid;
+
+int showStatusTime;
 
 time_t lastTime;
 
@@ -73,9 +76,11 @@ int tgets(char *str)
         rv = select(connFd + 1, &set, NULL, NULL, &timeout);
         if(rv == -1)
         {
-            perror("select");
-            charsRead = -1;
-            done = TRUE;
+            // Probably SIGALRM
+
+//            perror("select");
+//            charsRead = -1;
+//            done = TRUE;
         }
         else
         {
@@ -138,6 +143,26 @@ void getAsciiTime(char *buf)
     timeNow = time(NULL);
     localTimeTm = localtime(&timeNow);
     strftime(buf, 80, "%d %B %Y, %H:%M:%S", localTimeTm);
+}
+
+void telnetdSigalrm(int signum)
+{
+    double f;
+
+
+    f = (double)dabShMem -> dabFreq[dabShMem -> currentService.Freq].freq / 1000.0;
+
+    sprintf(pBuf, "  Frequency: %3.3lf MHz  %s, %s\n",
+                    f, dabShMem -> Ensemble, dabShMem -> currentService.Label);
+    tputs(pBuf);
+
+    cmdRssi("");
+    cmdTime("");
+
+    if(showStatusTime > 0)
+    {
+        alarm(showStatusTime);
+    }
 }
 
 void telnetdSigint(int signum)
@@ -261,6 +286,13 @@ void telnetd()
         sigemptyset(&sigintAction.sa_mask);
         sigintAction.sa_flags = 0;
         sigaction(SIGCHLD, &sigintAction, NULL);
+
+        sigintAction.sa_handler = telnetdSigalrm;
+        sigemptyset(&sigintAction.sa_mask);
+        sigintAction.sa_flags = 0;
+        sigaction(SIGALRM, &sigintAction, NULL);
+
+        showStatusTime = 0;
 
         bzero(&servAddr, sizeof(servAddr));
 

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "../types.h"
 #include "../dabcmd.h"
@@ -10,11 +11,34 @@
 #include "cli.h"
 
 extern char pBuf[];
+extern int showStatusTime;
 
 char *aMode[] =
 {
     "dual", "mono", "stereo", "joint stereo"
 };
+
+void cmdResetRadio(char *ptr)
+{
+    dabCmdType dabCmd;
+
+    dabCmd.cmd = DABCMD_RESET;
+    doCommand(&dabCmd, NULL);
+
+    tputs("Radio reset\n");
+}
+
+void cmdShowStatusCont(char *ptr)
+{
+    if(*ptr != '\0')
+    {
+        showStatusTime = atoi(ptr);
+        alarm(showStatusTime);
+    }
+
+    sprintf(pBuf, "Continual status update time: %d s\n", showStatusTime);
+    tputs(pBuf);
+}
 
 void cmdVersion(char *pPtr)
 {
@@ -79,7 +103,8 @@ void cmdScan(char *pPtr)
         doCommand(&dabCmd, NULL);
 
         f = (double)dabShMem -> dabFreq[curService.Freq].freq / 1000.0;
-        sprintf(pBuf, "  Frequency: %3.3lf MHz  Service: %s, %s (0x%08x/0x%08x)\n",
+        sprintf(pBuf,
+             "  Frequency: %3.3lf MHz  Service: %s, %s (0x%08x/0x%08x)\n",
                                        f,
                                        dabShMem -> Ensemble,
                                        dabShMem -> currentService.Label,
@@ -105,7 +130,9 @@ void cmdTime(char *pPtr)
 
 void cmdRssi(char *pPtr)
 {
-    sprintf(pBuf, "  RSSI: %d dBuV  SNR: %d dB  CNR: %d dB  FIC Quality: %d %%  FIB errors: %d\n",
+    sprintf(pBuf,
+       "  RSSI: %d dBuV  SNR: %d dB  CNR: %d dB"
+       "  FIC Quality: %d %%  FIB errors: %d\n",
                                      (dabShMem -> signalQuality.rssi / 256),
                                       dabShMem -> signalQuality.snr,
                                       dabShMem -> signalQuality.cnr,
@@ -143,7 +170,10 @@ void cmdEnsemble(char *pPtr)
 
         for(c = 0; c < dabShMem -> numberofservices; c++)
         {
-            if(dabShMem -> currentService.CompID == dabShMem -> service[c].CompID && dabShMem -> currentService.ServiceID == dabShMem -> service[c].ServiceID)
+            if(dabShMem -> currentService.CompID ==
+                 dabShMem -> service[c].CompID &&
+               dabShMem -> currentService.ServiceID ==
+                 dabShMem -> service[c].ServiceID)
             {
                 tputs(" *");
             }
