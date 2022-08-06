@@ -57,6 +57,5 @@
         <public>0</public>
         <stream-name>Remote DAB receiver</stream-name>
         <stream-description>Remote controlled DAB receiver</stream-description>
-
     </mount>
 </icecast>
