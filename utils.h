@@ -9,5 +9,7 @@ uint16_t spiBytesTo16(uint8_t *dPtr);
 uint32_t spiBytesTo32(uint8_t *dPtr);
 void dabshieldPowerup();
 void dabshieldReset();
+double freqIdToMHz(int id);
+double currentFreq(void);
 
 #endif

@@ -21,13 +21,14 @@
 #define DAB_DEFAULT_COMP_ID 0x20004
 #define DAB_LAST_SERVICE "dablast.dat"
 
-#define DAB_TICKTIME 20
-#define DAB_RSSI_TICKS 18       
-#define DAB_DLS_TICKS 100
-#define DAB_TIME_TICKS 30
-#define DAB_SHOWTIME_TICKS 1001
-#define DAB_SHOWSIG_TICKS 500
-#define DAB_SHOWSERV_TICKS 498
+#define DAB_TICKTIME       20
+#define DAB_LOGGER_TICKS   125
+#define DAB_RSSI_TICKS     300     
+#define DAB_DLS_TICKS      301
+#define DAB_TIME_TICKS     302
+#define DAB_SHOWSERV_TICKS 500
+#define DAB_SHOWSIG_TICKS  501
+#define DAB_SHOWTIME_TICKS 502
 
 boolean dabServiceValid(void);
 void dabWaitServiceList(void);
@@ -56,6 +57,7 @@ void dabShowServiceSummary();
 void dabShowState();
 void dabTune(DABService *service);
 void dabTuneFreq(DABService *service);
+void dabResetRadio(void);
 void dabMain();
 
 #endif

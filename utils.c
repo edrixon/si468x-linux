@@ -20,6 +20,7 @@
 #include "dab.h"
 
 extern uint8_t spiBuf[];
+extern uint32_t dab_freq[];
 
 void dabshieldPowerup()
 {
@@ -95,4 +96,18 @@ uint32_t spiBytesTo32(uint8_t *dPtr)
           ((uint32_t)dPtr[3] << 24);
 
     return rtn;
+}
+
+double freqIdToMHz(int id)
+{
+    double f;
+
+    f = (double)dab_freq[id] / 1000.0;
+
+    return f;
+}
+
+double currentFreq()
+{
+    return freqIdToMHz(dabShMem -> currentService.Freq);
 }

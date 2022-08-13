@@ -77,10 +77,14 @@ void siGetPartInfo(void)
 	spiBuf[1] = 0x00;
 	siWrite(2);
 	siCts();
-	siResponseN(10);
-	dabShMem -> sysInfo.chipRevision = spiBuf[5];
-	dabShMem -> sysInfo.romID = spiBuf[6];
-	dabShMem -> sysInfo.partNo = spiBytesTo16(&spiBuf[9]);
+}
+
+void siGetFuncInfo(void)
+{
+	spiBuf[0] = SI46XX_GET_FUNC_INFO;
+	spiBuf[1] = 0x00;
+	siWrite(2);
+	siCts();
 }
 
 void siGetSysState()
@@ -90,8 +94,6 @@ void siGetSysState()
 	spiBuf[1] = 0x00;
 	siWrite(2);
 	siCts();
-	siResponseN(6);
-        dabShMem -> sysInfo.activeImage = spiBuf[5];
 }
 
 void siPowerup()
@@ -202,6 +204,17 @@ void siSetProperty(uint16_t property, uint16_t value)
 	siCts();
 }
 
+void siGetProperty(uint16_t property)
+{
+	spiBuf[0] = SI46XX_GET_PROPERTY;
+	spiBuf[1] = 0x01;
+        spiBuf[2] = property & 0x00ff;
+        spiBuf[3] = (property >> 8) & 0xff;
+
+        siWrite(4);
+        siCts();
+}
+
 void siFlashLoad(uint32_t flash_addr)
 {
 	spiBuf[0] = SI46XX_FLASH_LOAD;
@@ -259,8 +272,6 @@ void siSetFreqList()
 void siDabTuneFreq(uint8_t freq_index)
 {
 	uint32_t timeout;
-
-        dabShMem -> currentService.Freq = freq_index;
 
 	spiBuf[0] = SI46XX_DAB_TUNE_FREQ;
 	spiBuf[1] = 0x00;
@@ -440,28 +451,26 @@ void siInitDab()
     siBoot();
     siSetFreqList();
 
-    //Set up INTB
+    // Enable DSRVINT interrupt
     siSetProperty(0x0000, 0x0010);
 
+    // Front end tuning magic numbers
     siSetProperty(0x1710, 0xF9FF);
     siSetProperty(0x1711, 0x0172);
     siSetProperty(0x1712, 0x0001);
 
-    siSetProperty(0x8100, 0x0001);	//enable DSRVPCKTINT
-    siSetProperty(0xb400, 0x0007);	//enable XPAD data
+    //enable DSRVPCKTINT
+    siSetProperty(0x8100, 0x0001);
+
+    //enable XPAD data
+    siSetProperty(0xb400, 0x0007);
 }
 
 void siReset()
 {
-    dabshieldPowerup();
-    dabshieldReset();
-
     siPowerup();
-    siGetSysState();
     siLoadInit();
     siHostLoad();
     siLoadInit();
     siFlashSetProperty(1, 10000);
-    siGetSysState();
 }
-

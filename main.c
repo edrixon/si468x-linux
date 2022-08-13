@@ -72,41 +72,55 @@ SPI_FLAGS definition
 extern unsigned int spi;
 extern unsigned char spiBuf[];
 
-extern int dab_freqs;
-extern uint32_t dab_freq[];
+#ifdef DAB_USE_ALL_CHANNELS
 
-void dabSigint(int signum)
+uint32_t dab_freq[] =
 {
-    dabShMem -> engineVersion = 0;
-    exit(0);
-}
+           174928, 176640, 178352, 180064, 181936, 183648, 185360,
+           187072, 188928, 190640, 192352, 194064, 195936, 197648,
+           199360, 201072, 202928, 204640, 206352, 208064, 209936,
+           211648, 213360, 215072, 216928, 218640, 220352, 222064,
+           223936, 225648, 227360, 229072, 230748, 232496, 234208,
+           235776, 237448, 239200
+};
 
-int main(int argc, char *arv[])
+#else
+
+extern uint32_t dab_freq[] =
+{
+           223936, 225648, 227360, 229072, 230748, 232496, 234208
+};
+
+#endif
+
+int dab_freqs = (sizeof(dab_freq) / sizeof(dab_freq[0]));
+
+void dabShmInit()
 {
     int c;
-    struct sigaction sigintAction;
 
-    printf("\n");
-    printf("DAB receiver control engine version %d.%d\n",
-              (DAB_ENGINE_VERSION & 0xff00) >> 8, DAB_ENGINE_VERSION & 0x00ff);
-    printf("\n");
+    dabShMem -> engineState = DAB_ENGINE_NOTREADY;
+    dabShMem -> engineVersion = DAB_ENGINE_VERSION;
 
-    shmBegin();
     for(c = 0; c < dab_freqs; c++)
     {
         dabShMem -> dabFreq[c].freq = dab_freq[c];
         dabShMem -> dabFreq[c].serviceValid = TRUE;
         strcpy(dabShMem -> dabFreq[c].ensemble, "unknown");
     }
+
     dabShMem -> dabFreqs = dab_freqs;
 
     dabShMem -> dabCmd.cmd = DABCMD_NONE;
     dabShMem -> dabCmd.rtn = DABRET_READY;
 
-    dabShMem -> engineVersion = DAB_ENGINE_VERSION;
-
     sem_init(&(dabShMem -> semaphore), 99, 1);
 
+}
+
+
+void dabGpioInit()
+{
     gpioInitialise();
 
     gpioSetMode(DAB_RESET_PIN, PI_OUTPUT);
@@ -114,19 +128,27 @@ int main(int argc, char *arv[])
     gpioSetPullUpDown(DAB_INT_PIN, PI_PUD_UP);
     gpioSetMode(DAB_ENABLE_PIN, PI_OUTPUT);
 
-    gpioSetAlertFunc(DAB_INT_PIN, dabInterrupt);
+    gpioSetISRFunc(DAB_INT_PIN, FALLING_EDGE, -1, dabInterrupt);
+
+}
+
+int main(int argc, char *arv[])
+{
+    printf("\n");
+    printf("DAB receiver control engine version %d.%d\n",
+              (DAB_ENGINE_VERSION & 0xff00) >> 8, DAB_ENGINE_VERSION & 0x00ff);
+    printf("\n");
+
+    shmBegin();
+    dabShmInit();
+
+    dabGpioInit();
 
     spi = spiOpen(SPI_SI_CHANNEL, SPI_SPEED, SPI_FLAGS);
     if(spi < 0)
     {
         printf("Error: opening SPI port for Si468x\n");
     }
-
-
-    sigintAction.sa_handler = dabSigint;
-    sigemptyset(&sigintAction.sa_mask);
-    sigintAction.sa_flags = 0;
-    sigaction(SIGINT, &sigintAction, NULL);
 
     dabBegin();
 

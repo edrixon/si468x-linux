@@ -15,11 +15,8 @@
 #include "si468x.h"
 #include "dabshmem.h"
 #include "dabcmd.h"
-
+#include "dab.h"
 #include "shm.h"
-
-extern int dab_freqs;
-extern uint32_t dab_freq[];
 
 void shmBegin()
 {

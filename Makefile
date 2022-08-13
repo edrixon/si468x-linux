@@ -1,8 +1,8 @@
 OUTFILE=dab
 
-SRC=main.c shm.c si468x.c utils.c dab.c
-INC=types.h dabshmem.h si468x.h si468xROM.h dabcmd.h shm.h utils.h dab.h
-OBJ=main.o shm.o si468x.o utils.o dab.o
+SRC=main.c shm.c si468x.c utils.c dab.c dablogger.c
+INC=types.h dabshmem.h si468x.h si468xROM.h dabcmd.h shm.h utils.h dab.h dablogger.h
+OBJ=main.o shm.o si468x.o utils.o dab.o dablogger.o
 LIB=-lpigpio -lrt -lm
 CFLAGS=-Wall -pthread
 LDFLAGS=-pthread
@@ -20,6 +20,8 @@ si468x.o: $(INC) si468x.c
 utils.o: $(INC) utils.c
 
 dab.o: $(INC) dab.c
+
+dablogger.o: $(INC) dablogger.c
 
 cli.o: $(INC) cli.c
 

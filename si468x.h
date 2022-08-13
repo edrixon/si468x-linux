@@ -42,17 +42,22 @@
 #define SI46XX_DAB_GET_SUBCHAN_INFO 			0xBE
 #define SI46XX_DAB_GET_RSSI                             0xE5
 
+#define SI46XX_DAB_ACF_CMFTNOISE_BER_LIMIT              0xB507
+#define SI46XX_DAB_ACF_CMFTNOISE_LEVEL                  0xB508
+
 void siWrite(uint32_t len);
 void siResponseN(int len);
 void siResponse(void);
 void siCts();
 void siGetPartInfo(void);
+void siGetFuncInfo(void);
 void siGetSysState();
 void siPowerup();
 void siLoadInit();
 void siHostLoad();
 void siFlashSetProperty(uint16_t property, uint16_t value);
 void siSetProperty(uint16_t property, uint16_t value);
+void siGetProperty(uint16_t property);
 void siFlashLoad(uint32_t flash_addr);
 void siBoot();
 void siSetFreqList();
