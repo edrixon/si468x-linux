@@ -17,23 +17,45 @@
 
 #include "../types.h"
 #include "../dabshmem.h"
+#include "../shm.h"
 #include "cli.h"
 #include "telnetd.h"
 #include "commands.h"
 
 int connFd;
 int listenFd;
-int telnetdConnections;
 pid_t telnetdPid;
 
+int showStatus;
 int showStatusTime;
+int showStatusLeft;
+
+int showDls;
+unsigned long int dlsMillis;
 
 time_t lastTime;
+
+telnetUserType telnetUsers[TELNETD_MAXCONNECTIONS];
 
 extern char pBuf[];
 extern char cliBuffer[];
 extern int cliDone;
 extern int cliTimeout;
+extern int cliTimeLeft;
+
+void telnetdIncUsers()
+{
+    shmLock();
+    dabShMem -> telnetUsers++;
+    shmFree();
+}
+
+void telnetdDecUsers()
+{
+    shmLock();
+    dabShMem -> telnetUsers--;
+    shmFree();
+}
 
 void tputs(char *str)
 {
@@ -59,73 +81,47 @@ int tgets(char *str)
     unsigned char inchar;
     int done;
     int charsRead;
-    fd_set set;
-    int rv;
-    struct timeval timeout;
-
-    FD_ZERO(&set);
-    FD_SET(connFd, &set);
-
 
     done = FALSE;
     charsRead = 0;
+    cliTimeLeft = cliTimeout;
     do
     {
-        timeout.tv_sec = cliTimeout;
-        timeout.tv_usec = 0;
-        rv = select(connFd + 1, &set, NULL, NULL, &timeout);
-        if(rv == -1)
+        if(read(connFd, &inchar, 1) != 1)
         {
-            // Probably SIGALRM
-
-//            perror("select");
-//            charsRead = -1;
-//            done = TRUE;
-        }
-        else
-        {
-            if(rv == 0)
+            if(cliTimeLeft == 0)
             {
-                // timeout
                 tputs("\nIdle timeout\n");
                 done = TRUE;
                 charsRead = -1;
             }
+        }
+        else
+        {
+            if(isprint(inchar) && charsRead < 80)
+            {
+                *str = inchar;
+                str++;
+                charsRead++;
+            }
             else
             {
-                if(read(connFd, &inchar, 1) != 1)
+                switch(inchar)
                 {
-                    done = TRUE;
-                    charsRead = -1;
-                }
-                else
-                {
-                    if(isprint(inchar) && charsRead < 80)
-                    {
-                        *str = inchar;
-                        str++;
-                        charsRead++;
-                    }
-                    else
-                    {
-                        switch(inchar)
+                    case '\n':
+                        *str = '\0';
+                        done = TRUE;
+                        break;
+
+                    case 0x08:
+                        if(charsRead > 0)
                         {
-                            case '\n':
-                                *str = '\0';
-                                done = TRUE;
-                                break;
-
-                            case 0x08:
-                                if(charsRead > 0)
-                                {
-                                    charsRead--;
-                                    str--;
-                                }
-                                break;
-
-                            default:;
+                            charsRead--;
+                            str--;
                         }
-                    }
+                        break;
+
+                    default:;
                 }
             }
         }
@@ -149,20 +145,56 @@ void telnetdSigalrm(int signum)
 {
     double f;
 
+    cliTimeLeft--;
 
-    f = (double)dabShMem -> dabFreq[dabShMem -> currentService.Freq].freq / 1000.0;
-
-    sprintf(pBuf, "  Frequency: %3.3lf MHz  %s, %s\n",
-                    f, dabShMem -> Ensemble, dabShMem -> currentService.Label);
-    tputs(pBuf);
-
-    cmdRssi("");
-    cmdTime("");
-
-    if(showStatusTime > 0)
+    if(showStatus > 0)
     {
-        alarm(showStatusTime);
+        showStatus--;
+        showStatusLeft--;
+        if(showStatusLeft == 0)
+        {
+            f = (double)dabShMem -> dabFreq[dabShMem -> currentService.Freq].freq / 1000.0;
+
+            sprintf(pBuf, "  Frequency: %3.3lf MHz  %s, %s\n",
+                    f, dabShMem -> Ensemble, dabShMem -> currentService.Label);
+            tputs(pBuf);
+
+            cmdRssi("");
+            cmdTime("");
+
+            showStatusLeft = showStatusTime;
+
+        }
     }
+    else
+    {
+        if(showStatus == 0)
+        {
+            tputs("Status messages timeout\n");
+            showStatus = -1;
+        }
+    }
+
+    if(showDls > 0)
+    {
+        showDls--;
+        if(dlsMillis != dabShMem -> serviceDataMs)
+        {
+            sprintf(pBuf, "  [%s]\n", dabShMem -> serviceData);
+            tputs(pBuf);
+            dlsMillis = dabShMem -> serviceDataMs;
+        }
+    }
+    else
+    {
+        if(showDls == 0)
+        {
+            tputs("DLS messages timedout\n");
+            showDls = -1;
+        }
+    }
+
+    alarm(1);
 }
 
 void telnetdSigint(int signum)
@@ -174,6 +206,7 @@ void telnetdSigint(int signum)
     if(myPid == telnetdPid)
     {
         printf("Telnet server exiting on SIGINT\n");
+        dabShMem -> telnetUsers = 0;
     }
     else
     {
@@ -185,20 +218,26 @@ void telnetdSigint(int signum)
 
 void telnetdSigchld(int signum)
 {
-    if(telnetdConnections)
+    pid_t childPid;
+
+    if(dabShMem -> telnetUsers)
     {
-        telnetdConnections--;
+        telnetdDecUsers();
     }    
 
-//    while(waitpid(-1, NULL, 0) > 0);
+    childPid = waitpid(-1, NULL, 0);
 
     getAsciiTime(pBuf);
-    printf("[%s] Disconnected (remaining connections %d)\n",
-                                                     pBuf, telnetdConnections);
+
+    printf("[%s] Client disconnected\n", pBuf);
+    printf("[%s] Process %d exited (active connections %d)\n",
+                                      pBuf, childPid, dabShMem -> telnetUsers);
 }
 
 void telnetdSession()
 {
+    alarm(1);
+
     sprintf(pBuf, "%s\n", CLIHELLO);
     tputs(pBuf);
 
@@ -232,7 +271,7 @@ void telnetdChild()
                                                dabShMem -> sysInfo.partNo);
     tputs(pBuf);
 
-    if(telnetdConnections >= TELNETD_MAXCONNECTIONS)
+    if(dabShMem -> telnetUsers > TELNETD_MAXCONNECTIONS)
     {
         tputs("Too many telnet connections!\n");
     }
@@ -248,7 +287,7 @@ void telnetdChild()
 void telnetdConnection(pid_t childPid, struct sockaddr_in *clientAddr)
 {
     close(connFd);
-    telnetdConnections++;
+    telnetdIncUsers();
 
     getAsciiTime(pBuf);
     printf("[%s] Connected to client %s (port %d)\n",
@@ -257,7 +296,49 @@ void telnetdConnection(pid_t childPid, struct sockaddr_in *clientAddr)
                                      ntohs(clientAddr -> sin_port));
     printf("[%s] Spawned process %d (connection %d)\n",
                                      pBuf,
-                                     childPid, telnetdConnections);
+                                     childPid, dabShMem -> telnetUsers);
+}
+
+int telnetBind(int fd, struct sockaddr *sa, int sz)
+{
+    int rtnFd;
+    int bindTimeout;
+
+    printf("  Binding... ");
+    fflush(stdout);
+
+    bindTimeout = 120;
+    do
+    {
+        rtnFd = bind(fd, sa, sz);
+        if(rtnFd < 0)
+        {
+            bindTimeout--;
+            if((bindTimeout % 2) == 0)
+            {
+                printf("/%c", 0x08);
+            }
+            else
+            {
+                printf("\\%c", 0x08);
+            } 
+            fflush(stdout);
+
+            sleep(1);
+        }
+    }
+    while(rtnFd < 0 && bindTimeout > 0);
+  
+    if(rtnFd < 0)
+    {
+        printf("FAILED\n");
+    }
+    else
+    { 
+        printf("OK\n"); 
+    }
+
+    return rtnFd;
 }
 
 void telnetd()
@@ -292,7 +373,10 @@ void telnetd()
         sigintAction.sa_flags = 0;
         sigaction(SIGALRM, &sigintAction, NULL);
 
+        showStatus = -1;
         showStatusTime = 0;
+        showDls = -1;
+        dlsMillis = 0;
 
         bzero(&servAddr, sizeof(servAddr));
 
@@ -300,7 +384,7 @@ void telnetd()
         servAddr.sin_addr.s_addr = htonl(INADDR_ANY);
         servAddr.sin_port = htons(TELNETD_PORT);
 
-        if(bind(listenFd, (struct sockaddr*)&servAddr, sizeof(servAddr)) < 0)
+        if(telnetBind(listenFd, (struct sockaddr*)&servAddr, sizeof(servAddr)) < 0)
         {
             perror("bind");
         }
@@ -314,30 +398,44 @@ void telnetd()
             {
                 printf("  Ready on port %d...\n\n", TELNETD_PORT);
 
-                telnetdConnections = 0;
+                dabShMem -> telnetUsers = 0;
                 addrLen = sizeof(struct sockaddr);
-                while(1)
+                while(dabShMem -> engineState == DAB_ENGINE_READY)
                 {
                     connFd = accept(listenFd,
                                      (struct sockaddr *)&clientAddr, &addrLen);
 
-                    if(connFd < 0)
+                    if(dabShMem -> engineState == DAB_ENGINE_READY)
                     {
-//                        perror("accept");
-                    }
-                    else
-                    {
-                        telnetdChildPid = fork();
-                        if(telnetdChildPid == 0)
+                        if(connFd < 0)
                         {
-                            telnetdChild();
+   //                        perror("accept");
                         }
                         else
                         {
-                            telnetdConnection(telnetdChildPid, &clientAddr);
+                            telnetdChildPid = fork();
+                            if(telnetdChildPid < 0)
+                            {
+                                perror("fork");
+                            }
+                            else
+                            {
+                                if(telnetdChildPid == 0)
+                                {
+                                    telnetdChild();
+                                }
+                                else
+                                {
+                                    telnetdConnection(telnetdChildPid,
+                                                                  &clientAddr);
+                                }
+                            }
                         }
                     }
                 }
+
+                printf("DAB engine not ready!!!\n");
+
             }
         }
     }

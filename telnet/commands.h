@@ -17,5 +17,7 @@ void cmdSave(char *);
 void cmdVersion(char *);
 void cmdShowStatusCont(char *);
 void cmdResetRadio(char *);
+void cmdShowDls(char *);
+void cmdShowInterruptCount(char *);
 
 #endif

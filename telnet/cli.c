@@ -26,23 +26,26 @@ char *cliPtr;
 int charsAvailable;
 int cliDone;
 int cliTimeout;
+int cliTimeLeft;
 
 CLICOMMAND cliCmd[] =
 {
     { "ainfo", "", cmdAudioInfo },
     { "chaninfo", "", cmdGetChannelInfo },
-    { "cstatus", "cstatus [<new time>]", cmdShowStatusCont },
+    { "cstatus", "cstatus [<interval> <max time>]", cmdShowStatusCont },
+    { "dls", "dls [<max time>]", cmdShowDls },
     { "ensemble", "", cmdEnsemble },
     { "exit", "", exitCmd },
     { "freq", "freq [<freq id>]", cmdFreq },
     { "help", "", helpCmd },
+    { "ints", "", cmdShowInterruptCount },
     { "reset", "", cmdResetRadio },
     { "rssi", "", cmdRssi },
     { "save", "", cmdSave },
     { "scan", "", cmdScan },
     { "service", "service [<service ID> <component ID>]", cmdTune },
     { "time", "", cmdTime },
-    { "tout", "tout [<new timeout>]", cmdTimeout },
+    { "tout", "tout [<cli timeout>]", cmdTimeout },
     { "ver", "", cmdVersion },
     { "?", "", helpCmd },
     { "", "", NULL }
@@ -62,6 +65,8 @@ void cmdTimeout(char *p)
         {
             cliTimeout = CLIMINTIMEOUT;
         }
+
+        cliTimeLeft = cliTimeout;
     }
 }
 
