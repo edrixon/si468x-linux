@@ -1,0 +1,47 @@
+body {
+  font-family: Arial;
+  font-size: 15px;
+  border: 0px;
+  margin: 0px;
+  padding:5px;
+  color: white;
+  background: #1abc9c;
+  white-space: pre;
+}
+
+p {
+  font-size: 10px;
+  border: 0px;
+  margin: 0px;
+}
+
+.text {
+  white-space: pre;
+}
+
+.header {
+  text-align: center;
+  color: white;
+  font-size: 30px;
+}
+
+.message {
+  text-align: center;
+  font-size: 30px;
+}
+
+.content {
+}
+
+.column {
+  float:left;
+  width:50%;
+}
+
+.row {
+  content: "";
+  display: table;
+  clear: both;
+  width: 100%;
+}
+
