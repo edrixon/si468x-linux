@@ -5,6 +5,9 @@
 #define LOGGER_INIT    0
 #define LOGGER_TUNE    1
 #define LOGGER_MEASURE 2
+#define LOGGER_STARTWAIT 3
+
+#define LOG_RESTART_TICKS 1500
 
 void dabControlLogger(void);
 void dabLogger(void);

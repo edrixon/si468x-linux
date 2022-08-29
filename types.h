@@ -12,6 +12,8 @@
 #define DAB_ENGINE_READY    0x55
 #define DAB_ENGINE_NOTREADY 0x00
 
+typedef unsigned char boolean;
+
 typedef struct
 {
     pid_t pid;
@@ -70,6 +72,7 @@ typedef struct
     unsigned int  ServiceID;
     unsigned int  CompID;
     char          Label[17];
+    unsigned char programmeType;
 } DABService;
 
 typedef struct
@@ -94,6 +97,11 @@ typedef struct
 typedef union
 {
     DABService service;
+    int squelch;
+    int rssiTime;
+    int acqTime;
+    int syncTime;
+    int detectTime;
 } paramType;
 
 typedef union
@@ -111,9 +119,20 @@ typedef struct
 
 typedef struct
 {
+    int rssiTime;
+    int rssiThreshold;
+    int acqTime;
+    int syncTime;
+    int detectTime;
+} validSignalType;
+
+typedef struct
+{
     int engineVersion;
     int engineState;
     sem_t semaphore;
+    int loggerRunning;
+    validSignalType validSignal;
     sysInfoType sysInfo;
     funcInfoType funcInfo;
     int dabServiceValid;
@@ -124,17 +143,17 @@ typedef struct
     DABService currentService;
     audioInfoType audioInfo;
     unsigned short int cuCount;
-    sigQualityType signalQuality;
-    char Ensemble[17];
     unsigned char numberofservices;
     DABService service[DAB_MAX_SERVICES];
     unsigned long int serviceDataMs;
     char serviceData[DAB_MAX_SERVICEDATA_LEN];
+    double loggerMeasureSeconds;
     int dabFreqs;
     dabFreqType dabFreq[DAB_MAX_FREQS];
     dabCmdType dabCmd;
     dabCmdRespType dabResp;
     int telnetUsers;
+    int httpUsers;
 } dabShMemType;
 
 #endif

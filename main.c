@@ -21,6 +21,7 @@
 #include "shm.h"
 #include "utils.h"
 #include "dab.h"
+#include "globals.h"
 
 #ifdef __ARSE
 
@@ -69,32 +70,6 @@ SPI_FLAGS definition
 
 #endif
 
-extern unsigned int spi;
-extern unsigned char spiBuf[];
-
-#ifdef DAB_USE_ALL_CHANNELS
-
-uint32_t dab_freq[] =
-{
-           174928, 176640, 178352, 180064, 181936, 183648, 185360,
-           187072, 188928, 190640, 192352, 194064, 195936, 197648,
-           199360, 201072, 202928, 204640, 206352, 208064, 209936,
-           211648, 213360, 215072, 216928, 218640, 220352, 222064,
-           223936, 225648, 227360, 229072, 230748, 232496, 234208,
-           235776, 237448, 239200
-};
-
-#else
-
-extern uint32_t dab_freq[] =
-{
-           223936, 225648, 227360, 229072, 230748, 232496, 234208
-};
-
-#endif
-
-int dab_freqs = (sizeof(dab_freq) / sizeof(dab_freq[0]));
-
 void dabShmInit()
 {
     int c;
@@ -102,14 +77,14 @@ void dabShmInit()
     dabShMem -> engineState = DAB_ENGINE_NOTREADY;
     dabShMem -> engineVersion = DAB_ENGINE_VERSION;
 
-    for(c = 0; c < dab_freqs; c++)
+    for(c = 0; c < DAB_FREQS; c++)
     {
         dabShMem -> dabFreq[c].freq = dab_freq[c];
         dabShMem -> dabFreq[c].serviceValid = TRUE;
         strcpy(dabShMem -> dabFreq[c].ensemble, "unknown");
     }
 
-    dabShMem -> dabFreqs = dab_freqs;
+    dabShMem -> dabFreqs = DAB_FREQS;
 
     dabShMem -> dabCmd.cmd = DABCMD_NONE;
     dabShMem -> dabCmd.rtn = DABRET_READY;
@@ -149,8 +124,6 @@ int main(int argc, char *arv[])
     {
         printf("Error: opening SPI port for Si468x\n");
     }
-
-    dabBegin();
 
     dabMain();
 

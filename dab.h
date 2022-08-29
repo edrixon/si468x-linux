@@ -2,8 +2,6 @@
 
 #define __GOT_DAB
 
-#define DAB_USE_ALL_CHANNELS
-
 #define DAB_ENGINE_VERSION 0x0100
 
 #define DAB_RESET_PIN   18
@@ -21,6 +19,12 @@
 #define DAB_DEFAULT_COMP_ID 0x20004
 #define DAB_LAST_SERVICE "dablast.dat"
 
+#define DAB_VALID_RSSI_TIME      100  // ms
+#define DAB_VALID_RSSI_THRESHOLD 8    // dBuV
+#define DAB_VALID_ACQ_TIME       3000 // ms
+#define DAB_VALID_SYNC_TIME      1500 // ms
+#define DAB_VALID_DETECT_TIME    50   // ms
+
 #define DAB_TICKTIME       20
 #define DAB_LOGGER_TICKS   125
 #define DAB_RSSI_TICKS     300     
@@ -30,11 +34,18 @@
 #define DAB_SHOWSIG_TICKS  501
 #define DAB_SHOWTIME_TICKS 502
 
+void dabSetValidRssiTime(int newVal);
+void dabSetValidRssiThreshold(int newVal);
+void dabSetValidAcqTime(int newVal);
+void dabSetValidSyncTime(int newVal);
+void dabSetValidDetectTime(int newVal);
+
 boolean dabServiceValid(void);
 void dabWaitServiceList(void);
 void dabParseServiceList(void);
 void dabGetDigRadioStatus();
-void dabGetEnsembleInfo(void);
+int dabGetEnsembleInfo(void);
+void dabGetEnsembleName(char *ensemble);
 void dabShowEnsemble();
 void dabGetRssi();
 void dabGetAudioLevel();

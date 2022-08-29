@@ -18,9 +18,7 @@
 #include "shm.h"
 #include "utils.h"
 #include "dab.h"
-
-extern uint8_t spiBuf[];
-extern uint32_t dab_freq[];
+#include "globals.h"
 
 void dabshieldPowerup()
 {
@@ -96,6 +94,17 @@ uint32_t spiBytesTo32(uint8_t *dPtr)
           ((uint32_t)dPtr[3] << 24);
 
     return rtn;
+}
+
+void freqIdToBlock(int id, char *block)
+{
+    int x;
+    int y;
+
+    x = (id / 4) + 5;
+    y = (id % 4) + 65;
+
+    sprintf(block, "%d%c", x, y);
 }
 
 double freqIdToMHz(int id)

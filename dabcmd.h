@@ -9,6 +9,11 @@
 #define DABCMD_TUNEFREQ          0x1004
 #define DABCMD_SAVE              0x1005
 #define DABCMD_RESET             0x1006
+#define DABCMD_SETSQUELCH        0x1007
+#define DABCMD_SETRSSITIME       0x1008
+#define DABCMD_SETACQTIME        0x1009
+#define DABCMD_SETSYNCTIME       0x100a
+#define DABCMD_SETDETECTTIME     0x100b
 #define DABCMD_EXIT              0x1099
 
 #define DABRET_READY             0x0000

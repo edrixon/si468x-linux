@@ -19,12 +19,7 @@
 #include "shm.h"
 #include "utils.h"
 #include "dab.h"
-
-extern uint8_t spiBuf[];
-extern uint32_t dab_freq[];
-extern int dab_freqs;
-extern uint8_t command_error;
-extern int spi;
+#include "globals.h"
 
 void siWrite(uint32_t len)
 {
@@ -252,11 +247,11 @@ void siSetFreqList()
 	uint32_t freq;
 
 	spiBuf[0] = SI46XX_DAB_SET_FREQ_LIST;
-	spiBuf[1] = dab_freqs;
+	spiBuf[1] = DAB_FREQS;
 	spiBuf[2] = 0x00;
 	spiBuf[3] = 0x00;
 
-	for (i = 0; i < dab_freqs; i++)
+	for (i = 0; i < DAB_FREQS; i++)
 	{
 		freq = dab_freq[i];
 
@@ -359,6 +354,20 @@ void siDabGetEnsembleInfo(void)
 	spiBuf[0] = SI46XX_DAB_GET_ENSEMBLE_INFO;
 	spiBuf[1] = 0x00;
 	siWrite(2);
+	siCts();
+}
+
+void siDabGetServiceInfo(uint32_t serviceID)
+{
+	spiBuf[0] = SI46XX_DAB_GET_SERVICE_INFO;
+	spiBuf[1] = 0x00;
+	spiBuf[2] = 0x00;
+	spiBuf[3] = 0x00;
+	spiBuf[4] = serviceID & 0xff;
+	spiBuf[5] = (serviceID >> 8) & 0xff;
+	spiBuf[6] = (serviceID >> 16) & 0xff;
+	spiBuf[7] = (serviceID >> 24) & 0xff;
+	siWrite(8);
 	siCts();
 }
 
