@@ -10,16 +10,7 @@
 #include "telnetd.h"
 #include "cli.h"
 
-extern char pBuf[];
-extern int showStatus;
-extern int showStatusTime;
-extern int showStatusLeft;
-extern int showDls;
-
-char *aMode[] =
-{
-    "dual", "mono", "stereo", "joint stereo"
-};
+#include "globals.h"
 
 double freqIdToMHz(int id)
 {
@@ -30,6 +21,41 @@ double freqIdToMHz(int id)
     return f;
 }
 
+void freqIdToBlock(int id, char *block)
+{
+    int x;
+    int y;
+
+    x = (id / 4) + 5;
+    y = (id % 4) + 65;
+
+    sprintf(block, "%d%c", x, y);
+}
+
+void cmdSquelch(char *ptr)
+{
+    int sqLevel;
+    dabCmdType dabCmd;
+
+    if(*ptr != '\0')
+    {
+        sqLevel = atoi(ptr);
+        if(sqLevel < 127 && sqLevel > 0)
+        {
+            dabCmd.cmd = DABCMD_SETSQUELCH;
+            dabCmd.params.squelch = sqLevel;
+            doCommand(&dabCmd, NULL);
+        }
+        else
+        {
+            tputs("Bad squelch level\n");
+        }
+    }
+
+    sprintf(pBuf, "Squelch level - %d dBuV\n", dabShMem -> validSignal.rssiThreshold);
+    tputs(pBuf);
+}
+
 void cmdShowInterruptCount(char *ptr)
 {
     sprintf(pBuf, "Interrupt count: %ld\n", dabShMem -> interruptCount);
@@ -38,23 +64,15 @@ void cmdShowInterruptCount(char *ptr)
 
 void cmdShowDls(char *ptr)
 {
-    if(*ptr != '\0')
+    if(showDls == FALSE)
     {
-        showDls = atoi(ptr);
-        if(showDls < 5)
-        {
-           showDls = 5;
-        }
-    }
-
-    if(showDls < 0)
-    {
-        tputs("DLS message display is disabled\n");
+        showDls = TRUE;
+        tputs("DLS message display enabled\n");;
     }
     else
     {
-        sprintf(pBuf, "Displaying DLS messages for %d seconds\n", showDls);
-        tputs(pBuf);
+        showDls = FALSE;
+        tputs("DLS message display disabled\n");
     }
 }
 
@@ -70,48 +88,23 @@ void cmdResetRadio(char *ptr)
 
 void cmdShowStatusCont(char *ptr)
 {
-    int tmpShowStatus;
-    int tmpShowStatusTime;
-    int minShowStatus;
     char *cPtr;
 
     if(*ptr != '\0')
     {
         cPtr = strtok(ptr, " ");
-        tmpShowStatusTime = atoi(cPtr);
-
-        cPtr = strtok(NULL, " ");
-        if(cPtr == NULL)
-        {
-            tputs("Missing timeout\n");
-        }
-        else
-        {
-            tmpShowStatus = atoi(cPtr);
-            minShowStatus = 2 * tmpShowStatusTime;
-
-            if(tmpShowStatus < minShowStatus)
-            {
-                showStatus = minShowStatus;
-            }
-            else
-            {
-                showStatus = tmpShowStatus;
-            }
-
-            showStatusTime = tmpShowStatusTime;
-            showStatusLeft = showStatusTime;
-        }
+        showStatusTime = atoi(cPtr);
+        showStatusLeft = showStatusTime;
     }
 
-    if(showStatus < 0)
+    if(showStatusTime == 0)
     {
         tputs("Status updates are disabled\n");
     }
     else
     {
-        sprintf(pBuf, "Status updates for every %d seconds for %d seconds\n",
-                                                   showStatusTime, showStatus);
+        sprintf(pBuf, "Status updates for every %d seconds\n",
+                                                   showStatusTime);
         tputs(pBuf);
     }
 }
@@ -150,6 +143,8 @@ void cmdScan(char *pPtr)
     dabCmdType dabCmd;
     DABService curService;
     int c;
+    dabFreqType *dFreq;
+    char block[6];
 
     bcopy(&(dabShMem -> currentService), &curService, sizeof(DABService));
  
@@ -163,30 +158,36 @@ void cmdScan(char *pPtr)
         dabCmd.cmd = DABCMD_TUNEFREQ;  
         dabCmd.params.service.Freq = c;
         doCommand(&dabCmd, NULL);
-        sprintf(pBuf, "  Frequency: %3.3lf MHz  %s\n", freqIdToMHz(c),
-                                                       dabShMem -> Ensemble);
+
+        dFreq = &(dabShMem -> dabFreq[c]);
+        freqIdToBlock(c, block);
+        sprintf(pBuf, "  Frequency: %s %3.3lf MHz  %s\n", block,
+                                            freqIdToMHz(c), dFreq -> ensemble);
         tputs(pBuf);
     }
+
+    bcopy(&curService, &dabCmd.params.service, sizeof(DABService));
+
+    dabCmd.cmd = DABCMD_TUNEFREQ;
+    doCommand(&dabCmd, NULL);
 
     if(curService.CompID != 0 && curService.ServiceID != 0)
     {
-        bcopy(&curService, &dabCmd.params.service, sizeof(DABService));
-
-        dabCmd.cmd = DABCMD_TUNEFREQ;
-        doCommand(&dabCmd, NULL);
-
         dabCmd.cmd = DABCMD_TUNE;  
         doCommand(&dabCmd, NULL);
+    }
 
-        sprintf(pBuf,
-             "  Frequency: %3.3lf MHz  Service: %s, %s (0x%08x/0x%08x)\n",
+    dFreq = &(dabShMem -> dabFreq[curService.Freq]);
+    freqIdToBlock(curService.Freq, block);
+    sprintf(pBuf,
+             "  Frequency: %s %3.3lf MHz  Service: %s, %s (0x%08x/0x%08x)\n",
+                                       block,
                                        freqIdToMHz(curService.Freq),
-                                       dabShMem -> Ensemble,
+                                       dFreq -> ensemble,
                                        dabShMem -> currentService.Label,
                                        dabShMem -> currentService.ServiceID,
                                        dabShMem -> currentService.CompID);
-        tputs(pBuf);
-    }
+    tputs(pBuf);
 }
 
 void cmdTime(char *pPtr)
@@ -241,11 +242,24 @@ void cmdAudioInfo(char *pPtr)
 void cmdEnsemble(char *pPtr)
 {
     int c;
+    dabFreqType *dFreq;
+    int pty;
+
+    dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
 
     if(dabShMem -> dabServiceValid == TRUE)
     {
-        sprintf(pBuf, "Ensemble: %s\n", dabShMem -> Ensemble);
+        sprintf(pBuf, "Ensemble: %s\n\n", dFreq -> ensemble);
         tputs(pBuf);
+
+        sprintf(pBuf, "  Component ID\tService ID\tType\tPTY\tProgramme name\n");
+        tputs(pBuf);
+
+        for(c = 0; c < 65; c++)
+        {
+            tputs("-");
+        }
+        tputs("\n");
 
         for(c = 0; c < dabShMem -> numberofservices; c++)
         {
@@ -261,10 +275,23 @@ void cmdEnsemble(char *pPtr)
                 tputs("  ");
             }
 
-            sprintf(pBuf, "0x%08x   0x%08x   %s\n",
+            sprintf(pBuf, "0x%08x\t0x%08x\t",
                                       dabShMem -> service[c].ServiceID,
-                                      dabShMem -> service[c].CompID,
-                                      dabShMem -> service[c].Label);
+                                      dabShMem -> service[c].CompID);
+            tputs(pBuf);
+
+            if((dabShMem -> service[c].programmeType & 0x01) == 0x01)
+            {
+                tputs("data\t\t");
+            }
+            else
+            {
+                pty = (dabShMem -> service[c].programmeType >> 1) & 0x1f;
+                sprintf(pBuf, "audio\t%s\t", ptyNames[pty]);
+                tputs(pBuf);
+            }
+
+            sprintf(pBuf, "%s\n", dabShMem -> service[c].Label);
             tputs(pBuf);
         }
     }
@@ -289,23 +316,71 @@ void cmdGetChannelInfo(char *cPtr)
 
     cInfo = &resp.channelInfo;
 
-    sprintf(pBuf, "  Mode: %d  Protection: %d  Bit rate: %d k  Num CUs: %d\n",
-                                                       cInfo -> serviceMode,
-                                                       cInfo -> protectionInfo,
-                                                       cInfo -> bitRate,
-                                                       cInfo -> numCu);
+    tputs("  Mode: ");
+    if(cInfo -> serviceMode > 8)
+    {
+        sprintf(pBuf, "%d", cInfo -> serviceMode);
+        tputs(pBuf);
+    }
+    else
+    {
+        tputs(serviceModeNames[cInfo -> serviceMode]);
+    }
+  
+    tputs("  Protection: "); 
+    if(cInfo -> protectionInfo > 13)
+    {
+        sprintf(pBuf, "%d", cInfo -> protectionInfo);
+    }
+    else
+    {
+        if(cInfo -> protectionInfo < 6)
+        {
+            sprintf(pBuf, "UEP %d", cInfo -> protectionInfo);
+        }
+        else
+        {
+            if(cInfo -> protectionInfo < 10)
+            {
+                sprintf(pBuf, "EEP A-%d", cInfo -> protectionInfo - 5);
+            }
+            else
+            {
+                sprintf(pBuf, "EEP B-%d", cInfo -> protectionInfo - 9);
+            }            
+        } 
+        tputs(pBuf);
+    } 
+
+    sprintf(pBuf, "  Bit rate: %d k  Num CUs: %d\n", cInfo -> bitRate,
+                                                              cInfo -> numCu);
     tputs(pBuf);
 }
 
 void cmdFreq(char *pPtr)
 {
     int c;
+    char block[6];
+    int d;
 
     if(*pPtr == '\0')
     {
-        tputs("Frequency list:-\n");
         for(c = 0; c < dabShMem -> dabFreqs; c++)
         {
+            if((c % 20) == 0)
+            {
+                sprintf(pBuf,"\n\t\tFrequency\tEnsemble\t\tRSSI\tSNR\tCNR\tFIC\tFIB errors\n");
+                tputs(pBuf);
+                sprintf(pBuf,"\t\tMHz\t\t\t\t\tdBuV\tdB\tdB\t%%\tper second\n");
+                tputs(pBuf);
+                for(d = 0; d < 100; d++)
+                {
+                    tputs("-");
+                }
+                tputs("\n");
+            }
+
+
             if(dabShMem -> currentService.Freq == c)
             {
                 tputs(" *");
@@ -314,19 +389,22 @@ void cmdFreq(char *pPtr)
             {
                 tputs("  ");
             }
-            sprintf(pBuf, "%d", c);
+            sprintf(pBuf, "%d\t", c);
             tputs(pBuf);
 
-            sprintf(pBuf, " %3.3lf MHz  %16s - ", freqIdToMHz(c),
+            freqIdToBlock(c, block);
+            sprintf(pBuf, " %s\t%3.3lf\t\t%-16s\t", block, freqIdToMHz(c),
                                              dabShMem -> dabFreq[c].ensemble);
             tputs(pBuf);
 
             if(dabShMem -> dabFreq[c].sigQuality.rssi != 0)
             {
-                sprintf(pBuf, "RSSI %d dBuV  SNR %d dB  CNR %d dB\n",
+                sprintf(pBuf, "%d\t%d\t%d\t%d\t%1.0lf\n",
                           dabShMem -> dabFreq[c].sigQuality.rssi,
                           dabShMem -> dabFreq[c].sigQuality.snr,
-                          dabShMem -> dabFreq[c].sigQuality.cnr);
+                          dabShMem -> dabFreq[c].sigQuality.cnr,
+                          dabShMem -> dabFreq[c].sigQuality.ficQuality,
+       dabShMem -> dabFreq[c].sigQuality.fibErrorCount / dabShMem -> loggerMeasureSeconds);
                 tputs(pBuf);
             }
             else
@@ -347,13 +425,17 @@ void cmdTune(char *pPtr)
     char *cPtr;
     char *endPtr;
     double f;
+    dabFreqType *dFreq;
+    char block[6];
 
     if(*pPtr == '\0')
     {
+        dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
         f = freqIdToMHz(dabShMem -> currentService.Freq);
 
-        sprintf(pBuf, "  Frequency: %3.3lf MHz - %s\n",
-                                                      f, dabShMem -> Ensemble);
+        freqIdToBlock(dabShMem -> currentService.Freq, block);
+        sprintf(pBuf, "  Frequency: %s %3.3lf MHz - %s\n", block,
+                                                      f, dFreq -> ensemble);
         tputs(pBuf);
 
         sprintf(pBuf, "  Service ID: 0x%08x  Component ID: 0x%08x - %s\n",
@@ -386,9 +468,12 @@ void cmdTune(char *pPtr)
                 dabCmd.cmd = DABCMD_TUNE;  
                 doCommand(&dabCmd, NULL);
 
+                dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
                 f = freqIdToMHz(dabShMem -> currentService.Freq);
-                sprintf(pBuf, "  Frequency: %3.3lf MHz  Service: %s, %s\n",
-                   f, dabShMem -> Ensemble, dabShMem -> currentService.Label);
+                freqIdToBlock(dabShMem -> currentService.Freq, block);
+                sprintf(pBuf, "  Frequency: %s %3.3lf MHz  Service: %s, %s\n",
+                          block, f,
+                          dFreq -> ensemble, dabShMem -> currentService.Label);
                 tputs(pBuf);
             }
         }
@@ -400,13 +485,17 @@ void cmdTuneFreq(char *pPtr)
     dabCmdType dabCmd;
     char *cPtr;
     double f;
+    dabFreqType *dFreq;
+    char block[6];
 
     if(*pPtr == '\0')
     {
-        f = (double)dabShMem -> dabFreq[dabShMem -> currentService.Freq].freq / 1000.0;
+        dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
+        f = freqIdToMHz(dabShMem -> currentService.Freq);
+        freqIdToBlock(dabShMem -> currentService.Freq, block);
 
-        sprintf(pBuf, "  Frequency: %3.3lf MHz  Service: %s, %s\n", f,
-                       dabShMem -> Ensemble, dabShMem -> currentService.Label);
+        sprintf(pBuf, "  Frequency: %s %3.3lf MHz  Service: %s, %s\n", block,
+                       f, dFreq -> ensemble, dabShMem -> currentService.Label);
         tputs(pBuf);
     }
     else
@@ -421,11 +510,82 @@ void cmdTuneFreq(char *pPtr)
         else
         {
             f = freqIdToMHz(dabCmd.params.service.Freq);
+            freqIdToBlock(dabCmd.params.service.Freq, block);
             dabCmd.cmd = DABCMD_TUNEFREQ;  
             doCommand(&dabCmd, NULL);
+            dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
             sprintf(pBuf, "  Frequency: %3.3lf MHz  Ensemble: %s\n", f,
-                                                       dabShMem -> Ensemble);
+                                                            dFreq -> ensemble);
             tputs(pBuf);
         }
     }
 }
+
+void cmdValidAcqTime(char *ptr)
+{
+    int acqTime;
+    dabCmdType dabCmd;
+
+    if(*ptr != '\0')
+    {
+        acqTime = atoi(ptr);
+        dabCmd.cmd = DABCMD_SETACQTIME;
+        dabCmd.params.acqTime = acqTime;
+        doCommand(&dabCmd, NULL);
+    }
+
+    sprintf(pBuf, "Valid ACQ time - %d ms\n", dabShMem -> validSignal.acqTime);
+    tputs(pBuf);
+}
+
+void cmdValidRssiTime(char *ptr)
+{
+    int rssiTime;
+    dabCmdType dabCmd;
+
+    if(*ptr != '\0')
+    {
+        rssiTime = atoi(ptr);
+        dabCmd.cmd = DABCMD_SETRSSITIME;
+        dabCmd.params.rssiTime = rssiTime;
+        doCommand(&dabCmd, NULL);
+    }
+
+    sprintf(pBuf, "Valid RSSI time - %d ms\n", dabShMem -> validSignal.rssiTime);
+    tputs(pBuf);
+}
+
+void cmdValidSyncTime(char *ptr)
+{
+    int syncTime;
+    dabCmdType dabCmd;
+
+    if(*ptr != '\0')
+    {
+        syncTime = atoi(ptr);
+        dabCmd.cmd = DABCMD_SETSYNCTIME;
+        dabCmd.params.syncTime = syncTime;
+        doCommand(&dabCmd, NULL);
+    }
+
+    sprintf(pBuf, "Valid sync time - %d ms\n", dabShMem -> validSignal.syncTime);
+    tputs(pBuf);
+}
+
+void cmdValidDetectTime(char *ptr)
+{
+    int detectTime;
+    dabCmdType dabCmd;
+
+    if(*ptr != '\0')
+    {
+        detectTime = atoi(ptr);
+        dabCmd.cmd = DABCMD_SETDETECTTIME;
+        dabCmd.params.detectTime = detectTime;
+        doCommand(&dabCmd, NULL);
+    }
+
+    sprintf(pBuf, "Valid detect time - %d ms\n", dabShMem -> validSignal.detectTime);
+    tputs(pBuf);
+}
+

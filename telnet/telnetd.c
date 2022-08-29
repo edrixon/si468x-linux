@@ -22,26 +22,7 @@
 #include "telnetd.h"
 #include "commands.h"
 
-int connFd;
-int listenFd;
-pid_t telnetdPid;
-
-int showStatus;
-int showStatusTime;
-int showStatusLeft;
-
-int showDls;
-unsigned long int dlsMillis;
-
-time_t lastTime;
-
-telnetUserType telnetUsers[TELNETD_MAXCONNECTIONS];
-
-extern char pBuf[];
-extern char cliBuffer[];
-extern int cliDone;
-extern int cliTimeout;
-extern int cliTimeLeft;
+#include "globals.h"
 
 void telnetdIncUsers()
 {
@@ -91,7 +72,7 @@ int tgets(char *str)
         {
             if(cliTimeLeft == 0)
             {
-                tputs("\nIdle timeout\n");
+                tputs("\n*** Idle timeout, CLI exiting...\n");
                 done = TRUE;
                 charsRead = -1;
             }
@@ -144,53 +125,36 @@ void getAsciiTime(char *buf)
 void telnetdSigalrm(int signum)
 {
     double f;
+    dabFreqType *dFreq;
 
     cliTimeLeft--;
 
-    if(showStatus > 0)
+    if(showStatusTime > 0)
     {
-        showStatus--;
         showStatusLeft--;
         if(showStatusLeft == 0)
         {
+            dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
             f = (double)dabShMem -> dabFreq[dabShMem -> currentService.Freq].freq / 1000.0;
 
             sprintf(pBuf, "  Frequency: %3.3lf MHz  %s, %s\n",
-                    f, dabShMem -> Ensemble, dabShMem -> currentService.Label);
+                       f, dFreq -> ensemble, dabShMem -> currentService.Label);
             tputs(pBuf);
 
             cmdRssi("");
             cmdTime("");
 
             showStatusLeft = showStatusTime;
-
-        }
-    }
-    else
-    {
-        if(showStatus == 0)
-        {
-            tputs("Status messages timeout\n");
-            showStatus = -1;
         }
     }
 
-    if(showDls > 0)
+    if(showDls == TRUE)
     {
-        showDls--;
         if(dlsMillis != dabShMem -> serviceDataMs)
         {
             sprintf(pBuf, "  [%s]\n", dabShMem -> serviceData);
             tputs(pBuf);
             dlsMillis = dabShMem -> serviceDataMs;
-        }
-    }
-    else
-    {
-        if(showDls == 0)
-        {
-            tputs("DLS messages timedout\n");
-            showDls = -1;
         }
     }
 
@@ -238,13 +202,14 @@ void telnetdSession()
 {
     alarm(1);
 
+    tputs("Waiting for logger to stop... ");
+    while(dabShMem -> loggerRunning == TRUE);
+    tputs("OK\n");
+
     sprintf(pBuf, "%s\n", CLIHELLO);
     tputs(pBuf);
 
     cliTimeout = CLITIMEOUT;
-    sprintf(pBuf, "CLI timeout is %d seconds\n", cliTimeout); 
-    tputs(pBuf);
-
     cliDone = FALSE;
     while(cliDone == FALSE)
     {
@@ -373,9 +338,8 @@ void telnetd()
         sigintAction.sa_flags = 0;
         sigaction(SIGALRM, &sigintAction, NULL);
 
-        showStatus = -1;
         showStatusTime = 0;
-        showDls = -1;
+        showDls = FALSE;
         dlsMillis = 0;
 
         bzero(&servAddr, sizeof(servAddr));

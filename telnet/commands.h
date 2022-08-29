@@ -19,5 +19,10 @@ void cmdShowStatusCont(char *);
 void cmdResetRadio(char *);
 void cmdShowDls(char *);
 void cmdShowInterruptCount(char *);
+void cmdSquelch(char *);
+void cmdValidAcqTime(char *);
+void cmdValidRssiTime(char *);
+void cmdValidDetectTime(char *);
+void cmdValidSyncTime(char *);
 
 #endif

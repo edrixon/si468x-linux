@@ -20,10 +20,7 @@
 #include "cli.h"
 #include "telnetd.h"
 
-char pBuf[255];
-
-extern int cliDone;
-extern char cliBuffer[];
+#include "globals.h"
 
 int main(int argc, char *argv[])
 {

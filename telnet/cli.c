@@ -19,46 +19,11 @@
 #include "cli.h"
 #include "telnetd.h"
 
-extern char pBuf[];
-
-char cliBuffer[80];
-char *cliPtr;
-int charsAvailable;
-int cliDone;
-int cliTimeout;
-int cliTimeLeft;
-
-CLICOMMAND cliCmd[] =
-{
-    { "ainfo", "", cmdAudioInfo },
-    { "chaninfo", "", cmdGetChannelInfo },
-    { "cstatus", "cstatus [<interval> <max time>]", cmdShowStatusCont },
-    { "dls", "dls [<max time>]", cmdShowDls },
-    { "ensemble", "", cmdEnsemble },
-    { "exit", "", exitCmd },
-    { "freq", "freq [<freq id>]", cmdFreq },
-    { "help", "", helpCmd },
-    { "ints", "", cmdShowInterruptCount },
-    { "reset", "", cmdResetRadio },
-    { "rssi", "", cmdRssi },
-    { "save", "", cmdSave },
-    { "scan", "", cmdScan },
-    { "service", "service [<service ID> <component ID>]", cmdTune },
-    { "time", "", cmdTime },
-    { "tout", "tout [<cli timeout>]", cmdTimeout },
-    { "ver", "", cmdVersion },
-    { "?", "", helpCmd },
-    { "", "", NULL }
-};
+#include "globals.h"
 
 void cmdTimeout(char *p)
 {
-    if(*p == '\0')
-    {
-        sprintf(pBuf, "CLI timeout: %d seconds\n", cliTimeout);;
-        tputs(pBuf);
-    }
-    else
+    if(*p != '\0')
     {
         cliTimeout = atoi(p);
         if(cliTimeout < CLIMINTIMEOUT)
@@ -68,6 +33,9 @@ void cmdTimeout(char *p)
 
         cliTimeLeft = cliTimeout;
     }
+
+    sprintf(pBuf, "CLI timeout: %d seconds\n", cliTimeout);;
+    tputs(pBuf);
 }
 
 void helpCmd(char *p)
