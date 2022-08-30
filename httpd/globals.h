@@ -21,11 +21,12 @@ contentHeaderType contentHeaders[] =
 
 httpHandlerType httpBuiltIn[] =
 {
-    { "/service", httpGetService },
     { "/system", httpGetSystem },
     { "/current", httpGetCurrent },
     { "/freq", httpGetFreqs },
     { "/ensemble", httpGetEnsemble },
+    { "/channel", httpSetChannel },
+    { "/service", httpSetService },
     { "", NULL }
 };
 

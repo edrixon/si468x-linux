@@ -7,6 +7,8 @@ void httpGetFreqs();
 void httpGetEnsemble();
 void httpGetSystem();
 void httpGetCurrent();
+void httpSetChannel();
+void httpSetService();
 
 void httpGet(char **params);
 

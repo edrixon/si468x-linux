@@ -8,6 +8,8 @@ let dabFreq;
 //
 async function getRadioData() {
 
+  initServiceInfo();
+
   let req = await fetch("/current", {cache: "no-store"});
   currentService = await req.json();
 
@@ -20,6 +22,24 @@ async function getRadioData() {
   populateServiceInfo();
   populateChannelSelector();
   populateServiceSelector();
+
+}
+
+function initServiceInfo() {
+  let myP = document.getElementById('serviceName');
+  myP.textContent = "Loading...";
+
+  myP = document.getElementById('channelBlock');
+  myP.textContent = "Block: ??";
+
+  myP = document.getElementById('channelFreq');
+  myP.textContent = "Frequency: ??";
+
+  myP = document.getElementById('ensembleName');
+  myP.textContent = "Ensemble: ??";
+
+  myP = document.getElementById('signalQuality');
+  myP.textContent = "RSSI: ?? dBuV  SNR: ?? dB  CNR: ?? dB  FIC quality: ?? %"; 
 
 }
 
@@ -72,6 +92,8 @@ function populateChannelSelector() {
 //
 function populateServiceSelector() {
 
+  stopPlayer();
+
   const srvSel= document.getElementById('serviceSelector');
   removeOptions(srvSel);
 
@@ -93,16 +115,45 @@ function removeOptions(selectElement) {
    }
 }
 
+function stopPlayer() {
+  const player = document.getElementById('player');
+  player.pause();
+}
+
 window.onload = function() {
-  channelSelector.onchange = function() {
-    console.log(channelSelector.value);
-    let url = "/channel&freq="+channelSelector.selectedIndex;
-//    let req = await fetch(url, {cache: "no-store"});
+  channelSelector.onchange = async function() {
+    stopPlayer();
+    initServiceInfo();
+
+    const url = "/channel&"+channelSelector.selectedIndex;
     console.log(url);
+    let req = await fetch(url, {cache: "no-store"});
+    currentService = await req.json();
+
+    req = await fetch("/ensemble", {cache: "no-store"});
+    ensemble = await req.json();
+
+    console.log("Got response");
+
+    populateServiceInfo();
+    populateServiceSelector();
   }
 
-  serviceSelector.onchange = function() {
-//  let req = await fetch("/current", {cache: "no-store"});
+  serviceSelector.onchange = async function() {
+    stopPlayer();
+    initServiceInfo();
+
+    const srv = serviceSelector.selectedIndex;
+    let url = "/service&" + ensemble.services[srv].servid;
+    url = url + "&" + ensemble.services[srv].compid;
+    
+    console.log(url);
+    let req = await fetch(url, {cache: "no-store"});
+    currentService = await req.json();
+
+    console.log("Got response");
+
+    populateServiceInfo();
   }
 
   getRadioData();

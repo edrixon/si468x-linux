@@ -7,6 +7,7 @@
 #include "../types.h"
 #include "../dabshmem.h"
 #include "../shm.h"
+#include "../dabcmd.h"
 #include "httpd.h"
 
 #include "globals.h"
@@ -52,9 +53,21 @@ int parseFilename(char *fname, char *contentType)
     return rtn;
 }
 
-void httpSendHeader(char *contentType)
+void httpSendHeader(int respCode, char *contentType)
 {
-    tputs("HTTP/1.1 200 OK\n");
+    sprintf(pBuf, "HTTP/1.1 %d ", respCode);
+    switch(respCode)
+    {
+        case 404:
+            strcat(pBuf, "Not found\n");
+            break;
+
+        default:
+            strcat(pBuf, "OK\n");
+            break;
+    }
+    tputs(pBuf);
+
     tputs("Connection: Keep-alive\n");
     tputs("Server: dab radio\n");
     if(contentType == NULL)
@@ -77,7 +90,7 @@ void httpGetFreqs(char **params)
  
     dFreq = dabShMem -> dabFreq; 
 
-    httpSendHeader("application/json");
+    httpSendHeader(200, "application/json");
     tputs("{\n");
 
     sprintf(pBuf, "  \"numFreq\" : %d,\n", dabShMem -> dabFreqs);
@@ -135,7 +148,7 @@ void httpGetFreqs(char **params)
 
 void httpGetSystem(char **params)
 {
-    httpSendHeader("application/json");
+    httpSendHeader(200, "application/json");
     tputs("{\n");
     sprintf(pBuf, "  \"partNo\" : \"Si%d\",\n", dabShMem -> sysInfo.partNo);
     tputs(pBuf);
@@ -153,7 +166,7 @@ void httpGetEnsemble(char **params)
     dServ = &(dabShMem -> service[0]);
     c = dabShMem -> numberofservices;
 
-    httpSendHeader("application/json");
+    httpSendHeader(200, "application/json");
     tputs("{\n");
 
     sprintf(pBuf, "  \"numServices\" : \"%d\",\n", c);
@@ -204,7 +217,7 @@ void httpGetCurrent(char **params)
     freqId = dabShMem -> currentService.Freq;
     dFreq = &(dabShMem -> dabFreq[freqId]); 
 
-    httpSendHeader("application/json");
+    httpSendHeader(200, "application/json");
     tputs("{\n");
 
     if(dabShMem -> time.tm_year > 0)
@@ -251,27 +264,73 @@ void httpGetCurrent(char **params)
     tputs("}\n");
 }
 
-void httpGetService(char **params)
+void httpSetChannel(char **params)
 {
-    printf("GET SERVICE\n");
+    char *p1;
+    char *fName;
+    dabCmdType dabCmd;
+    int channelBlock;
+    char strBuf[255];
 
-    httpSendHeader(NULL);
+    strcpy(strBuf, *params);
+    fName = strtok(strBuf, "&");
+    p1 = strtok(NULL, "&");
+    if(p1 == NULL)
+    {
+        printf("Bad parameter\n");
+        return;
+    }
 
-    sprintf(pBuf, "Service: %s\n", dabShMem -> currentService.Label);
-    tputs(pBuf);
+    channelBlock = atoi(p1);
+
+    dabCmd.params.service.Freq = channelBlock;
+    dabCmd.cmd = DABCMD_TUNEFREQ;  
+    doCommand(&dabCmd, NULL);
+
+    httpGetCurrent(params);
 }
 
+void httpSetService(char **params)
+{
+    char *p1;
+    char *p2;
+    char *fName;
+    dabCmdType dabCmd;
+    int serviceId;
+    int compId;
+    char strBuf[255];
+
+    strcpy(strBuf, *params);
+    fName = strtok(strBuf, "&");
+    p1 = strtok(NULL, "&");
+    p2 = strtok(NULL,"&");
+    if(p1 == NULL || p2 == NULL)
+    {
+        printf("Bad parameter\n");
+        return;
+    }
+
+    serviceId = atoi(p1);
+    compId = atoi(p2);
+
+    dabCmd.params.service.ServiceID = serviceId;
+    dabCmd.params.service.CompID = compId;
+    dabCmd.cmd = DABCMD_TUNE;  
+    doCommand(&dabCmd, NULL);
+
+    httpGetCurrent(params);
+}
 
 int httpBuiltInFile(char **params)
 {
     // Handle the json stuff
 
     char *fName;
-    char pBuf[255];
+    char strBuf[255];
     int c;
 
-    strcpy(pBuf, *params);
-    fName = strtok(pBuf, "&");
+    strcpy(strBuf, *params);
+    fName = strtok(strBuf, "&");
 
     c = 0;
     while(httpBuiltIn[c].name[0] != '\0' &&
@@ -291,7 +350,7 @@ int httpBuiltInFile(char **params)
     }
 }
 
-int httpSendFile(char *fname)
+int httpSendFile(int respCode, char *fname)
 {
     char fullFname[255];
     unsigned char rdBuff[64];
@@ -309,11 +368,11 @@ int httpSendFile(char *fname)
 
     if(parseFilename(fname, contentType) == TRUE)
     {
-        httpSendHeader(contentType);
+        httpSendHeader(respCode, contentType);
     }
     else
     {
-        httpSendHeader(NULL);
+        httpSendHeader(respCode, NULL);
     }
 
     do
@@ -336,11 +395,11 @@ void httpGet(char **params)
 
     if(strcmp(*params, "/") == 0 || strcmp(*params, "/index.htm") == 0)
     {
-        sent = httpSendFile("index.html");
+        sent = httpSendFile(200, "index.html");
     }
     else
     {
-        sent = httpSendFile(*params);
+        sent = httpSendFile(200, *params);
     }
 
     if(sent != TRUE)
@@ -348,9 +407,27 @@ void httpGet(char **params)
         // Real file not found response, try built-in file
         if(httpBuiltInFile(params) != TRUE)
         {
-            httpSendFile("404.html");
+            httpSendFile(404, "404.html");
         }
     }
 
     sleep(1);
+}
+
+int doCommand(dabCmdType *cmd, dabCmdRespType *resp)
+{
+    int rtn;
+
+    shmLock();
+    cmd -> userPid = getpid();
+    bcopy(cmd, &(dabShMem -> dabCmd), sizeof(dabCmdType));
+    while(dabShMem -> dabCmd.cmd != DABCMD_NONE);
+    rtn = dabShMem -> dabCmd.rtn;
+    if(resp != NULL)
+    {
+        bcopy(&(dabShMem -> dabResp), resp, sizeof(dabCmdRespType));
+    }
+    shmFree();
+
+    return rtn;
 }
