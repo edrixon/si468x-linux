@@ -6,31 +6,34 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 
+<body>
+
 <div class="header">
   <h1>Remote DAB radio</h1>
 </div>
 
 <div id="theradio" class="row">
 
-  <div id="tuning" class="column">
+  <div id="tuning" class="side">
    <p>Service: <select id="serviceSelector"></select></p>
    <p>Channel: <select id="channelSelector"></select></p>
-   <audio id="player" controls src="http://192.168.1.63:8000/dab.mp3"></audio>
+   <audio id="player" controls src="http://192.168.1.63:8000/dab.mp3" preload="none"></audio>
+   <img src="dablogo.jpg" class="image">
   </div>
 
-  <div id="serviceInfo" class="column">
+  <div id="serviceInfo" class="main">
     <h1 id="serviceName"></h1>
     <p id="channelBlock"></p>
     <p id="channelFreq"></p>
     <p id="ensembleName"></p>
-    <p id="signalQuality"></p>
+    <p id="signalQuality" class="keepspaces"></p>
   </div>
 
 </div>
 
-<div id="listen" class="row">
-</div>
 
 <script type="text/javascript" src="/dabradio.js"></script>
+
+</body>
 
 </html>
