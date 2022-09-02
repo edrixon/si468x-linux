@@ -12,10 +12,11 @@ int webDone;
 
 contentHeaderType contentHeaders[] =
 {
-    { "html", "text/html" },
-    { "css", "text/css" },
-    { "json", "application/js" },
-    { "js", "text/javascript" },
+    { "html", "text/html", FALSE },
+    { "css", "text/css", FALSE },
+    { "jpg", "image/jpeg", TRUE },
+    { "json", "application/json", FALSE },
+    { "js", "text/javascript", FALSE },
     { "", "" }
 };
 

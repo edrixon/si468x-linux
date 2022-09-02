@@ -1,14 +1,18 @@
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
 
+
 #include "../types.h"
 #include "../dabshmem.h"
 #include "../shm.h"
 #include "../dabcmd.h"
 #include "httpd.h"
+#include "httphandlers.h"
 
 #include "globals.h"
 
@@ -17,7 +21,7 @@ void freqIdToBlock(int freqId, char *block)
     sprintf(block, "%d%c", (freqId / 4) + 5, (freqId % 4) + 65);
 }
 
-int parseFilename(char *fname, char *contentType)
+int parseFilename(char *fname, int *needLength, char *contentType)
 {
     char *cPtr;
     int c;
@@ -27,6 +31,7 @@ int parseFilename(char *fname, char *contentType)
     strcpy(strBuf, fname);
 
     *contentType = '\0';
+    *needLength = FALSE;
     rtn = FALSE;
 
     cPtr = strtok(strBuf, ".");
@@ -45,6 +50,7 @@ int parseFilename(char *fname, char *contentType)
             if(contentHeaders[c].fileExtension[0] != '\0')
             {
                 strcpy(contentType, contentHeaders[c].mimeType);
+                *needLength = contentHeaders[c].needLength;
                 rtn = TRUE;
             }
         }
@@ -53,8 +59,10 @@ int parseFilename(char *fname, char *contentType)
     return rtn;
 }
 
-void httpSendHeader(int respCode, char *contentType)
+void httpSendHeader(char *fName, int respCode, int needLength, char *contentType)
 {
+    struct stat statBuff;
+
     sprintf(pBuf, "HTTP/1.1 %d ", respCode);
     switch(respCode)
     {
@@ -66,19 +74,26 @@ void httpSendHeader(int respCode, char *contentType)
             strcat(pBuf, "OK\n");
             break;
     }
-    tputs(pBuf);
+    tputsCRLF(TRUE, pBuf);
 
-    tputs("Connection: Keep-alive\n");
-    tputs("Server: dab radio\n");
-    if(contentType == NULL)
+    tputsCRLF(TRUE, "Connection: Keep-alive\n");
+    tputsCRLF(TRUE, "Server: dab radio\n");
+
+    sprintf(pBuf, "Content-type: %s\n", contentType);
+    tputsCRLF(TRUE, pBuf);
+
+    if(needLength == TRUE)
     {
-        tputs("Content-type: text/html\n");
+        stat(fName, &statBuff);
+
+        sprintf(pBuf, "Content-length: %ld\n", statBuff.st_size);
+        printf("%s", pBuf);
+        tputsCRLF(TRUE, pBuf);
     }
-    else
-    {
-        sprintf(pBuf, "Content-type: %s\n", contentType);
-    }
-    tputs("\n");
+
+    tputsCRLF(TRUE, "\n"); 
+
+    printf("Content-type: %s\n", contentType);
 }
 
 void httpGetFreqs(char **params)
@@ -90,7 +105,7 @@ void httpGetFreqs(char **params)
  
     dFreq = dabShMem -> dabFreq; 
 
-    httpSendHeader(200, "application/json");
+    httpSendHeader(NULL, 200, FALSE, "application/json");
     tputs("{\n");
 
     sprintf(pBuf, "  \"numFreq\" : %d,\n", dabShMem -> dabFreqs);
@@ -148,7 +163,7 @@ void httpGetFreqs(char **params)
 
 void httpGetSystem(char **params)
 {
-    httpSendHeader(200, "application/json");
+    httpSendHeader(NULL, 200, FALSE, "application/json");
     tputs("{\n");
     sprintf(pBuf, "  \"partNo\" : \"Si%d\",\n", dabShMem -> sysInfo.partNo);
     tputs(pBuf);
@@ -166,7 +181,7 @@ void httpGetEnsemble(char **params)
     dServ = &(dabShMem -> service[0]);
     c = dabShMem -> numberofservices;
 
-    httpSendHeader(200, "application/json");
+    httpSendHeader(NULL, 200, FALSE, "application/json");
     tputs("{\n");
 
     sprintf(pBuf, "  \"numServices\" : \"%d\",\n", c);
@@ -217,7 +232,7 @@ void httpGetCurrent(char **params)
     freqId = dabShMem -> currentService.Freq;
     dFreq = &(dabShMem -> dabFreq[freqId]); 
 
-    httpSendHeader(200, "application/json");
+    httpSendHeader(NULL, 200, FALSE, "application/json");
     tputs("{\n");
 
     if(dabShMem -> time.tm_year > 0)
@@ -267,8 +282,8 @@ void httpGetCurrent(char **params)
 void httpSetChannel(char **params)
 {
     char *p1;
-    char *fName;
     dabCmdType dabCmd;
+    char *fName;
     int channelBlock;
     char strBuf[255];
 
@@ -353,10 +368,14 @@ int httpBuiltInFile(char **params)
 int httpSendFile(int respCode, char *fname)
 {
     char fullFname[255];
-    unsigned char rdBuff[64];
+    unsigned char rdBuff[1400];
     char contentType[64];
     int readed;
+    int needLength;
+    long bytesSent;
     FILE *fp;
+
+    bytesSent = 0;
 
     sprintf(fullFname, "%s/%s", WWW_ROOT, fname);
 
@@ -366,23 +385,26 @@ int httpSendFile(int respCode, char *fname)
         return FALSE;
     }
 
-    if(parseFilename(fname, contentType) == TRUE)
+    if(parseFilename(fname, &needLength, contentType) == TRUE)
     {
-        httpSendHeader(respCode, contentType);
+        httpSendHeader(fullFname, respCode, needLength, contentType);
     }
     else
     {
-        httpSendHeader(respCode, NULL);
+        httpSendHeader(fullFname, respCode, FALSE, "html/text");
     }
 
     do
     {
-        readed = fread(rdBuff, 1, 64, fp);
+        readed = fread(rdBuff, 1, 1400, fp);
         write(connFd, rdBuff, readed);
+        bytesSent = bytesSent + readed;
     }
-    while(readed == 64);
+    while(readed == 1400);
 
     fclose(fp);
+
+    printf("Sent %ld bytes\n", bytesSent);
 
     return TRUE;
 }

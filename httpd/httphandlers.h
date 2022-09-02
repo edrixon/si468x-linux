@@ -2,6 +2,8 @@
 
 #define __GOT_HTTPHANDLERS
 
+
+int doCommand(dabCmdType *cmd, dabCmdRespType *resp);
 void httpGetService();
 void httpGetFreqs();
 void httpGetEnsemble();

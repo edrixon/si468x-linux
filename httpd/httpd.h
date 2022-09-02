@@ -5,6 +5,7 @@
 void httpdIncUsers();
 void httpdDecUsers();
 void tputs(char *str);
+void tputsCRLF(int expandCRLF, char *str);
 int tgets(char *str);
 void getAsciiTime(char *buf);
 void telnetdSigalrm(int signum);
@@ -29,6 +30,7 @@ typedef struct
 {
     char *fileExtension;
     char *mimeType;
+    int needLength;
 } contentHeaderType;
 
 #endif

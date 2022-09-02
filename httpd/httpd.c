@@ -38,18 +38,23 @@ void httpdDecUsers()
 
 void tputs(char *str)
 {
+    tputsCRLF(FALSE, str);
+}
+
+void tputsCRLF(int expandCRLF, char *str)
+{
     int c;
     char xTra;
 
+    xTra = '\r';
     c = strlen(str);
     while(c)
     {
-        write(connFd, str, 1);
-        if(*str == '\n')
+        if(expandCRLF == TRUE && *str == '\n')
         {
-            xTra = '\r';
             write(connFd, &xTra, 1);
         }
+        write(connFd, str, 1);
         str++;
         c--;
     }
