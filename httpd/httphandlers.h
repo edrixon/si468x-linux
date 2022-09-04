@@ -5,6 +5,7 @@
 
 int doCommand(dabCmdType *cmd, dabCmdRespType *resp);
 void httpGetService();
+void httpGetServiceData();
 void httpGetFreqs();
 void httpGetEnsemble();
 void httpGetSystem();

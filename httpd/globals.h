@@ -26,6 +26,7 @@ httpHandlerType httpBuiltIn[] =
     { "/current", httpGetCurrent },
     { "/freq", httpGetFreqs },
     { "/ensemble", httpGetEnsemble },
+    { "/servicedata", httpGetServiceData },
     { "/channel", httpSetChannel },
     { "/service", httpSetService },
     { "", NULL }

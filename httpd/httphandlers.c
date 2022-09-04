@@ -76,7 +76,8 @@ void httpSendHeader(char *fName, int respCode, int needLength, char *contentType
     }
     tputsCRLF(TRUE, pBuf);
 
-    tputsCRLF(TRUE, "Connection: Keep-alive\n");
+//    tputsCRLF(TRUE, "Connection: Keep-alive\n");
+//    tputsCRLF(TRUE, "Keep-alive: timeout=20, max=10\n");
     tputsCRLF(TRUE, "Server: dab radio\n");
 
     sprintf(pBuf, "Content-type: %s\n", contentType);
@@ -87,13 +88,22 @@ void httpSendHeader(char *fName, int respCode, int needLength, char *contentType
         stat(fName, &statBuff);
 
         sprintf(pBuf, "Content-length: %ld\n", statBuff.st_size);
-        printf("%s", pBuf);
         tputsCRLF(TRUE, pBuf);
     }
 
     tputsCRLF(TRUE, "\n"); 
+}
 
-    printf("Content-type: %s\n", contentType);
+void httpGetServiceData(char **params)
+{
+    httpSendHeader(NULL, 200, FALSE, "application/json");
+
+    tputs("{\n");
+    sprintf(pBuf, "  \"serviceDataMs\" : %ld,\n", dabShMem -> serviceDataMs);
+    tputs(pBuf);
+    sprintf(pBuf, "  \"serviceData\" : \"%s\"\n", dabShMem -> serviceData);
+    tputs(pBuf);
+    tputs("}\n");
 }
 
 void httpGetFreqs(char **params)
@@ -403,8 +413,6 @@ int httpSendFile(int respCode, char *fname)
     while(readed == 1400);
 
     fclose(fp);
-
-    printf("Sent %ld bytes\n", bytesSent);
 
     return TRUE;
 }
