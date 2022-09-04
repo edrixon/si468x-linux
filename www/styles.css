@@ -70,15 +70,29 @@ body {
   padding: 10px;
 }
 
+.player {
+  align-content: center;
+  width: 50%;
+  height: 50%;
+  padding: 1px;
+}
+
 /* Footer */
 .footer {
   padding: 20px;
-  text-align: center;
+  width: 100%;
+  text-align: right;
   background: #ddd;
 }
 
 .keepspaces {
   white-space: pre;
+}
+
+.servicedata {
+  padding: 10px;
+  font-weight: bold;
+  background-color: #f1f1f1;
 }
 
 /* Responsive layout - when the screen is less than 700px wide, make the two columns stack on top of each other instead of next to each other */

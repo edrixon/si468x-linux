@@ -2,6 +2,13 @@
 let currentService;
 let ensemble;
 let dabFreq;
+let sysInfo;
+let serviceDataLastMs;
+let serviceData;
+let intervalId;
+let audioSrc;
+let isPlaying;
+let audioUrl;
 
 //
 // Get data
@@ -19,15 +26,61 @@ async function getRadioData() {
   req = await fetch("/ensemble", {cache: "no-store"});
   ensemble = await req.json();
 
+  req = await fetch("/system", {cache: "no-store"});
+  sysInfo = await req.json();
+
   populateServiceInfo();
   populateChannelSelector();
   populateServiceSelector();
+  populateSysInfo();
+}
+
+function playerLoadStart() {
+  const myP = document.getElementById('progress');
+  myP.textContent = "Loading...";
+}
+
+function playerLoadedData() {
+  const myP = document.getElementById('progress');
+  myP.textContent = "Buffering...";
+}
+
+function playerProgress() {
+  const myP = document.getElementById('progress');
+  myP.textContent = "Playing...";
+}
+
+function playerCanPlay() {
+  const myP = document.getElementById('progress');
+  myP.textContent = "";
+}
+
+function initPlayer() {
+  const button = document.getElementById('play');
+  button.src = "speaker.jpg";
+
+  const myP = document.getElementById('progress');
+  myP.textContent = "";
+
+  const player = document.getElementById('player');
+  player.setAttribute('preload', 'none');
+  player.addEventListener("canplay", playerCanPlay);
+  player.addEventListener("loadstart", playerLoadStart);
+  player.addEventListener("loadeddata", playerLoadedData);
+  player.addEventListener("progress", playerProgress);
+
+  isPlaying = false;
+
+  audioUrl = "http://192.168.1.63:8000/dab.mp3";
 
 }
 
 function initServiceInfo() {
   let myP = document.getElementById('serviceName');
   myP.textContent = "Loading...";
+
+  myP = document.getElementById('dabTime');
+  myP.textContent = "??";
 
   myP = document.getElementById('channelBlock');
   myP.textContent = "Block: ??";
@@ -41,6 +94,8 @@ function initServiceInfo() {
   myP = document.getElementById('signalQuality');
   myP.textContent = "RSSI: ?? dBuV  SNR: ?? dB  CNR: ?? dB  FIC quality: ?? %"; 
 
+  myP = document.getElementById('serviceData');
+  myP.textContent = "";
 }
 
 //
@@ -60,12 +115,7 @@ function populateServiceInfo() {
   myP = document.getElementById('ensembleName');
   myP.textContent = "Ensemble: " + currentService.ensembleName;
 
-  myP = document.getElementById('signalQuality');
-  myP.textContent = "RSSI: " + currentService.rssi + "  ";
-  myP.textContent = myP.textContent + "SNR: " + currentService.snr + "  ";
-  myP.textContent = myP.textContent + "CNR: " + currentService.cnr + "  ";
-  myP.textContent = myP.textContent + "FIC quality: " + currentService.ficQuality;
-
+  populateSignalQuality();
 }
 
 //
@@ -108,6 +158,12 @@ function populateServiceSelector() {
   }
 }
 
+function populateSysInfo() {
+  let myP = document.getElementById('sysinfo');
+  myP.textContent = "Hw: " + sysInfo.partNo;
+  myP.textContent = myP.textContent + " Sw: " + sysInfo.swVer;
+}
+
 function removeOptions(selectElement) {
    var i, L = selectElement.options.length - 1;
    for(i = L; i >= 0; i--) {
@@ -116,8 +172,64 @@ function removeOptions(selectElement) {
 }
 
 function stopPlayer() {
+
+  isPlaying = false;
+
+  const button = document.getElementById('play');
+  button.src = "speaker.jpg";
+
+  const myP = document.getElementById('progress');
+  myP.textContent = "";
+
   const player = document.getElementById('player');
   player.pause();
+  player.removeAttribute('src');
+  player.load();
+
+}
+
+function startPlayer() {
+
+  isPlaying = true;
+
+  const button = document.getElementById('play');
+  button.src = "mute.jpg";
+
+  const player = document.getElementById('player');
+  player.setAttribute('src', audioUrl);
+  player.play();
+
+}
+
+function populateSignalQuality() {
+
+  const myP = document.getElementById('signalQuality');
+  myP.textContent = "RSSI: " + currentService.rssi + "  ";
+  myP.textContent = myP.textContent + "SNR: " + currentService.snr + "  ";
+  myP.textContent = myP.textContent + "CNR: " + currentService.cnr + "  ";
+  myP.textContent = myP.textContent + "FIC quality: " + currentService.ficQuality;
+
+}
+
+async function servInfo() {
+
+  let req = await fetch("/servicedata", {cache: "no-store"});
+  serviceData = await req.json();
+
+  req = await fetch("/current", {cache: "no-store"});
+  currentService = await req.json();
+
+  if(serviceData.serviceDataMs != serviceDataLastMs) {
+    serviceDataLastMs = serviceData.serviceDataMs;
+
+    const myP = document.getElementById('serviceData');
+    myP.textContent = serviceData.serviceData;
+  }
+
+  populateSignalQuality();
+
+  myP = document.getElementById('dabTime');
+  myP.textContent = currentService.time;
 }
 
 window.onload = function() {
@@ -132,8 +244,6 @@ window.onload = function() {
 
     req = await fetch("/ensemble", {cache: "no-store"});
     ensemble = await req.json();
-
-    console.log("Got response");
 
     populateServiceInfo();
     populateServiceSelector();
@@ -151,11 +261,21 @@ window.onload = function() {
     let req = await fetch(url, {cache: "no-store"});
     currentService = await req.json();
 
-    console.log("Got response");
-
     populateServiceInfo();
   }
 
-  getRadioData();
-}
+  play.onclick = function() {
+    if(isPlaying == false) {
+      startPlayer();
+    } else {
+      stopPlayer();
+    }
+  }
 
+  getRadioData();
+
+  initPlayer();
+
+  serviceDataLastMs = 0;
+  intervalId = setInterval(servInfo, 20000);
+}
