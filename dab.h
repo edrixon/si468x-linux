@@ -26,13 +26,13 @@
 #define DAB_VALID_DETECT_TIME    50   // ms
 
 #define DAB_TICKTIME       20
-#define DAB_LOGGER_TICKS   125
+#define DAB_LOGGER_TICKS   120
+#define DAB_DLS_TICKS      290
 #define DAB_RSSI_TICKS     300     
-#define DAB_DLS_TICKS      301
-#define DAB_TIME_TICKS     302
+#define DAB_TIME_TICKS     310
+#define DAB_SHOWSIG_TICKS  490
 #define DAB_SHOWSERV_TICKS 500
-#define DAB_SHOWSIG_TICKS  501
-#define DAB_SHOWTIME_TICKS 502
+#define DAB_SHOWTIME_TICKS 510
 
 void dabSetValidRssiTime(int newVal);
 void dabSetValidRssiThreshold(int newVal);
