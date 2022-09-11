@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
-
+#include <time.h>
 
 #include "../types.h"
 #include "../dabshmem.h"
@@ -59,54 +59,15 @@ int parseFilename(char *fname, int *needLength, char *contentType)
     return rtn;
 }
 
-void httpSendHeader(char *fName, int respCode, int needLength, char *contentType)
+void jsonServiceData()
 {
-    struct stat statBuff;
-
-    sprintf(pBuf, "HTTP/1.1 %d ", respCode);
-    switch(respCode)
-    {
-        case 404:
-            strcat(pBuf, "Not found\n");
-            break;
-
-        default:
-            strcat(pBuf, "OK\n");
-            break;
-    }
-    tputsCRLF(TRUE, pBuf);
-
-//    tputsCRLF(TRUE, "Connection: Keep-alive\n");
-//    tputsCRLF(TRUE, "Keep-alive: timeout=20, max=10\n");
-    tputsCRLF(TRUE, "Server: dab radio\n");
-
-    sprintf(pBuf, "Content-type: %s\n", contentType);
-    tputsCRLF(TRUE, pBuf);
-
-    if(needLength == TRUE)
-    {
-        stat(fName, &statBuff);
-
-        sprintf(pBuf, "Content-length: %ld\n", statBuff.st_size);
-        tputsCRLF(TRUE, pBuf);
-    }
-
-    tputsCRLF(TRUE, "\n"); 
-}
-
-void httpGetServiceData(char **params)
-{
-    httpSendHeader(NULL, 200, FALSE, "application/json");
-
-    tputs("{\n");
     sprintf(pBuf, "  \"serviceDataMs\" : %ld,\n", dabShMem -> serviceDataMs);
     tputs(pBuf);
-    sprintf(pBuf, "  \"serviceData\" : \"%s\"\n", dabShMem -> serviceData);
+    sprintf(pBuf, "  \"serviceData\" : \"%s\",\n", dabShMem -> serviceData);
     tputs(pBuf);
-    tputs("}\n");
 }
 
-void httpGetFreqs(char **params)
+void jsonFreqs()
 {
     dabFreqType *dFreq;
     int c;
@@ -114,9 +75,6 @@ void httpGetFreqs(char **params)
     int freqId;
  
     dFreq = dabShMem -> dabFreq; 
-
-    httpSendHeader(NULL, 200, FALSE, "application/json");
-    tputs("{\n");
 
     sprintf(pBuf, "  \"numFreq\" : %d,\n", dabShMem -> dabFreqs);
     tputs(pBuf);
@@ -166,33 +124,25 @@ void httpGetFreqs(char **params)
         }
     }
 
-    tputs("    ]\n");
-    tputs("}\n");
-
+    tputs("    ],\n");
 }
 
-void httpGetSystem(char **params)
+void jsonSystem()
 {
-    httpSendHeader(NULL, 200, FALSE, "application/json");
-    tputs("{\n");
     sprintf(pBuf, "  \"partNo\" : \"Si%d\",\n", dabShMem -> sysInfo.partNo);
     tputs(pBuf);
-    sprintf(pBuf, "  \"swVer\" : \"%d.%d.%d\"\n", dabShMem -> funcInfo.major,
+    sprintf(pBuf, "  \"swVer\" : \"%d.%d.%d\",\n", dabShMem -> funcInfo.major,
                        dabShMem -> funcInfo.minor, dabShMem -> funcInfo.build);
     tputs(pBuf);
-    tputs("}\n");
 }
 
-void httpGetEnsemble(char **params)
+void jsonEnsemble()
 {
     DABService *dServ;
     int c;
 
     dServ = &(dabShMem -> service[0]);
     c = dabShMem -> numberofservices;
-
-    httpSendHeader(NULL, 200, FALSE, "application/json");
-    tputs("{\n");
 
     sprintf(pBuf, "  \"numServices\" : \"%d\",\n", c);
     tputs(pBuf);
@@ -228,11 +178,10 @@ void httpGetEnsemble(char **params)
         }
     }
 
-    tputs("    ]\n");
-    tputs("}\n");
+    tputs("    ],\n");
 }
 
-void httpGetCurrent(char **params)
+void jsonCurrent()
 {
     dabFreqType *dFreq;
     int freqId;
@@ -241,9 +190,6 @@ void httpGetCurrent(char **params)
 
     freqId = dabShMem -> currentService.Freq;
     dFreq = &(dabShMem -> dabFreq[freqId]); 
-
-    httpSendHeader(NULL, 200, FALSE, "application/json");
-    tputs("{\n");
 
     if(dabShMem -> time.tm_year > 0)
     {
@@ -283,10 +229,96 @@ void httpGetCurrent(char **params)
     tputs(pBuf);
     sprintf(pBuf, "  \"cnr\" : \"%d dB\",\n", dFreq -> sigQuality.cnr);
     tputs(pBuf);
-    sprintf(pBuf, "  \"ficQuality\" : \"%d %%\"\n",
+    sprintf(pBuf, "  \"ficQuality\" : \"%d %%\",\n",
                                                dFreq -> sigQuality.ficQuality);
     tputs(pBuf);
+}
+
+void httpSendHeader(char *fName, int respCode, int needLength, char *contentType)
+{
+    struct stat statBuff;
+
+    sprintf(pBuf, "HTTP/1.1 %d ", respCode);
+    switch(respCode)
+    {
+        case 404:
+            strcat(pBuf, "Not found\n");
+            break;
+
+        default:
+            strcat(pBuf, "OK\n");
+            break;
+    }
+    tputsCRLF(TRUE, pBuf);
+
+    tputsCRLF(TRUE, "Server: dab radio\n");
+
+    sprintf(pBuf, "Content-type: %s\n", contentType);
+    tputsCRLF(TRUE, pBuf);
+
+    if(needLength == TRUE)
+    {
+        stat(fName, &statBuff);
+
+        sprintf(pBuf, "Content-length: %ld\n", statBuff.st_size);
+        tputsCRLF(TRUE, pBuf);
+    }
+
+    tputsCRLF(TRUE, "\n"); 
+}
+
+void httpStartJson()
+{
+    httpSendHeader(NULL, 200, FALSE, "application/json");
+
+    tputs("{\n");
+}
+
+void httpEndJson()
+{
+    sprintf(pBuf, "  \"ticks\" : %ld\n", time(NULL));
+    tputs(pBuf);
     tputs("}\n");
+}
+
+void httpGetDabRadio(char **params)
+{
+}
+
+void httpGetServiceData(char **params)
+{
+    httpStartJson();
+    jsonServiceData();
+    httpEndJson();
+}
+
+void httpGetFreqs(char **params)
+{
+
+    httpStartJson();
+    jsonFreqs();
+    httpEndJson();
+}
+
+void httpGetSystem(char **params)
+{
+    httpStartJson();
+    jsonSystem();
+    httpEndJson();
+}
+
+void httpGetEnsemble(char **params)
+{
+    httpStartJson();
+    jsonEnsemble();
+    httpEndJson();
+}
+
+void httpGetCurrent(char **params)
+{
+    httpStartJson(); 
+    jsonCurrent();
+    httpEndJson();
 }
 
 void httpSetChannel(char **params)
@@ -348,8 +380,6 @@ void httpSetService(char **params)
 
 int httpBuiltInFile(char **params)
 {
-    // Handle the json stuff
-
     char *fName;
     char strBuf[255];
     int c;

@@ -29,6 +29,7 @@ httpHandlerType httpBuiltIn[] =
     { "/servicedata", httpGetServiceData },
     { "/channel", httpSetChannel },
     { "/service", httpSetService },
+    { "/dabradio", httpGetDabRadio },
     { "", NULL }
 };
 

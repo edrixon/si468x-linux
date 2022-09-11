@@ -12,6 +12,7 @@ void httpGetSystem();
 void httpGetCurrent();
 void httpSetChannel();
 void httpSetService();
+void httpGetDabRadio();
 
 void httpGet(char **params);
 
