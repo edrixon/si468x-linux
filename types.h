@@ -48,16 +48,13 @@ typedef struct
     unsigned int freq;
     char ensemble[17];
     boolean serviceValid;
+    unsigned short int cuCount;
     sigQualityType sigQuality;
+    boolean minAlarmEnabled;
+    sigQualityType minSignal;
+    boolean maxAlarmEnabled;
+    sigQualityType maxSignal;
 } dabFreqType;
-
-typedef struct
-{
-    unsigned char chipRevision;
-    unsigned char romID;
-    unsigned int partNo;
-    unsigned char activeImage;
-} sysInfoType;
 
 typedef struct
 {
@@ -65,6 +62,15 @@ typedef struct
     unsigned char minor;
     unsigned char build;
 } funcInfoType;
+
+typedef struct
+{
+    unsigned char chipRevision;
+    unsigned char romID;
+    unsigned int  partNo;
+    unsigned char activeImage;
+    funcInfoType funcInfo;
+} sysInfoType;
 
 typedef struct
 {
@@ -77,9 +83,16 @@ typedef struct
 
 typedef struct
 {
-    unsigned int serviceID;
-    unsigned int compID;
-    unsigned char serviceMode;
+    int state;
+    int freq;
+    DABService monitorService;
+    DABService loggingService;
+    DABService *currentService;
+} dabLoggerType;
+
+typedef struct
+{
+    unsigned char  serviceMode;
     unsigned char  protectionInfo;
     unsigned short int bitRate;
     unsigned short int numCu;
@@ -128,27 +141,33 @@ typedef struct
 
 typedef struct
 {
+    DABService lastService;
+    validSignalType validSignal;
+    int coverageTime;
+    int loggerTime;
+} sysConfigType;
+
+typedef struct
+{
     int engineVersion;
     int engineState;
     sem_t semaphore;
-    int loggerRunning;
-    validSignalType validSignal;
+    sysConfigType sysConfig;
     sysInfoType sysInfo;
-    funcInfoType funcInfo;
-    int dabServiceValid;
     unsigned long int interruptCount;
     double audioLevel;
     unsigned int audioLevelRaw;
     struct tm time;
     DABService currentService;
     audioInfoType audioInfo;
-    unsigned short int cuCount;
+    channelInfoType channelInfo;
     unsigned char numberofservices;
     DABService service[DAB_MAX_SERVICES];
     unsigned long int serviceDataMs;
     char serviceData[DAB_MAX_SERVICEDATA_LEN];
+    int loggerRunning;
     double loggerMeasureSeconds;
-    int dabFreqs;
+    int numDabFreqs;
     dabFreqType dabFreq[DAB_MAX_FREQS];
     dabCmdType dabCmd;
     dabCmdRespType dabResp;

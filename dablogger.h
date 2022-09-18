@@ -10,7 +10,7 @@
 #define LOG_RESTART_TICKS 1500
 
 void dabControlLogger(void);
-void dabLogger(void);
+void dabLoggerMain(void);
 void dabLoggerTune(void);
 void dabLoggerMeasure(void);
 void dabInitLogger(void);

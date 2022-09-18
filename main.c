@@ -77,14 +77,14 @@ void dabShmInit()
     dabShMem -> engineState = DAB_ENGINE_NOTREADY;
     dabShMem -> engineVersion = DAB_ENGINE_VERSION;
 
-    for(c = 0; c < DAB_FREQS; c++)
+    for(c = 0; c < numDabMhz; c++)
     {
-        dabShMem -> dabFreq[c].freq = dab_freq[c];
+        dabShMem -> dabFreq[c].freq = dabMhz[c];
         dabShMem -> dabFreq[c].serviceValid = TRUE;
         strcpy(dabShMem -> dabFreq[c].ensemble, "unknown");
     }
 
-    dabShMem -> dabFreqs = DAB_FREQS;
+    dabShMem -> numDabFreqs = numDabMhz;
 
     dabShMem -> dabCmd.cmd = DABCMD_NONE;
     dabShMem -> dabCmd.rtn = DABRET_READY;

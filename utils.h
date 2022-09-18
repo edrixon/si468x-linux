@@ -12,5 +12,6 @@ void dabshieldReset();
 void freqIdToBlock(int id, char *block);
 double freqIdToMHz(int id);
 double currentFreq(void);
+dabFreqType *currentDabFreq(void);
 
 #endif

@@ -12,6 +12,7 @@
 #include "utils.h"
 #include "dablogger.h"
 #include "dab.h"
+#include "timers.h"
 #include "globals.h"
 
 int dabLoggerRunning()
@@ -21,12 +22,12 @@ int dabLoggerRunning()
 
 void dabInitLogger()
 {
-    loggerState = LOGGER_INIT;
-    loggerFreq = 21;
-    bzero(&loggingService, sizeof(DABService));
-    currentService = &(dabShMem -> currentService);
+    dabLogger.state = LOGGER_INIT;
+    dabLogger.freq = 21;
+    bzero(&dabLogger.loggingService, sizeof(DABService));
+    dabLogger.currentService = &(dabShMem -> currentService);
     dabShMem -> loggerMeasureSeconds =
-                            (double)(DAB_TICKTIME * DAB_LOGGER_TICKS) / 1000.0;
+                                   (DAB_LOGGER_TICKS * DAB_TICKTIME) / 1000.0;
 }
 
 void dabStartLoggerWait()
@@ -35,28 +36,42 @@ void dabStartLoggerWait()
 
 void dabStartLogger()
 {
+    dabTimerType *dTmr;
+
     printf("****\n");
     printf("**** Starting logger...\n");
     printf("****\n");
-    loggerState = LOGGER_TUNE;
+    dabLogger.state = LOGGER_TUNE;
 
-    bcopy(currentService, &monitorService, sizeof(DABService));
-    bcopy(&loggingService, currentService, sizeof(DABService));
+    bcopy(
+       dabLogger.currentService, &dabLogger.monitorService, sizeof(DABService));
+    bcopy(
+       &dabLogger.loggingService, dabLogger.currentService, sizeof(DABService));
+
+    dTmr = dabGetTimer("LOGGER");
+    dabStartTimer(dTmr);
 
     dabShMem -> loggerRunning = TRUE;
+
+    dabLoggerTune();
 }
 
 void dabStopLogger()
 {
+    dabTimerType *dTmr;
+
     printf("****\n");
     printf("**** Stopping logger...\n");
     printf("****\n");
     loggerRestartDelay = LOG_RESTART_TICKS; 
 
-    loggerState = LOGGER_STARTWAIT;
+    dabLogger.state = LOGGER_STARTWAIT;
 
-    bcopy(currentService, &loggingService, sizeof(DABService));
-    bcopy(&monitorService, currentService, sizeof(DABService));
+    bcopy(dabLogger.currentService, &dabLogger.loggingService, sizeof(DABService));
+    bcopy(&dabLogger.monitorService, dabLogger.currentService, sizeof(DABService));
+
+    dTmr = dabGetTimer("LOGGER");
+    dabStopTimer(dTmr);
 
     dabResetRadio();
 
@@ -65,7 +80,7 @@ void dabStopLogger()
 
 void dabControlLogger()
 {
-    switch(loggerState)
+    switch(dabLogger.state)
     {
         case LOGGER_INIT:
             if(dabShMem -> telnetUsers == 0 && dabShMem -> httpUsers == 0)
@@ -74,14 +89,7 @@ void dabControlLogger()
             }
             break;
 
-        case LOGGER_TUNE:
-            if(dabShMem -> telnetUsers > 0 || dabShMem -> httpUsers > 0)
-            {
-                dabStopLogger();
-            }
-            break;
-     
-
+        case LOGGER_TUNE:;
         case LOGGER_MEASURE:
             if(dabShMem -> telnetUsers > 0 || dabShMem -> httpUsers > 0)
             {
@@ -111,44 +119,50 @@ void dabControlLogger()
     }
 }
 
-void dabLogger()
+void dabLoggerMain()
 {
-    switch(loggerState)
+#ifdef __SEPARATE_TUNE
+    switch(dabLogger.state)
     {
         case LOGGER_TUNE:
             dabLoggerTune();
-            loggerState = LOGGER_MEASURE;
+            dabLogger.state = LOGGER_MEASURE;
             break;
 
         case LOGGER_MEASURE:
             dabLoggerMeasure();
-            loggerState = LOGGER_TUNE;
+            dabLogger.state = LOGGER_TUNE;
             break;
 
         default:;
     }
+#else
+
+    dabLoggerMeasure();
+    dabLoggerTune();
+
+#endif
 }
 
 void dabLoggerTune()
 {
     char block[6];
 
-    currentService -> Freq = loggerFreq;
+    dabLogger.currentService -> Freq = dabLogger.freq;
 
-    freqIdToBlock(loggerFreq, block);
-    printf("  Tuning to %s, %3.3f MHz\n", block,
-                                          freqIdToMHz(currentService -> Freq));
+    freqIdToBlock(dabLogger.freq, block);
+    printf("  Tuning to %s, %3.3lf MHz\n", block, currentFreq());
 
-    dabTuneFreq(currentService);
+    dabTuneFreq(dabLogger.currentService);
 }
 
 void dabLoggerMeasure()
 {
     dabFreqType *dFreq;
 
-    dFreq = &(dabShMem -> dabFreq[loggerFreq]);
+    dFreq = &(dabShMem -> dabFreq[dabLogger.freq]);
 
-    currentService -> Freq = loggerFreq;
+    dabLogger.currentService -> Freq = dabLogger.freq;
     dabServiceValid();
     if(dabGetEnsembleInfo() == TRUE)
     {
@@ -161,10 +175,10 @@ void dabLoggerMeasure()
     dabGetDigRadioStatus();
     dabShowSignal();
 
-    loggerFreq++;
-    if(loggerFreq == dabShMem -> dabFreqs)
+    dabLogger.freq++;
+    if(dabLogger.freq == dabShMem -> numDabFreqs)
     {
-        loggerFreq = 0;
+        dabLogger.freq = 0;
     }
 
     printf("\n");

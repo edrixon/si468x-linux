@@ -18,6 +18,7 @@
 #define DAB_DEFAULT_SERVICE_ID 0xc224
 #define DAB_DEFAULT_COMP_ID 0x20004
 #define DAB_LAST_SERVICE "dablast.dat"
+#define DAB_SYSCONFIG "dabrx.config"
 
 #define DAB_VALID_RSSI_TIME      100  // ms
 #define DAB_VALID_RSSI_THRESHOLD 8    // dBuV
@@ -26,13 +27,14 @@
 #define DAB_VALID_DETECT_TIME    50   // ms
 
 #define DAB_TICKTIME       20
-#define DAB_LOGGER_TICKS   120
+#define DAB_LOGGER_TICKS   60
 #define DAB_DLS_TICKS      290
 #define DAB_RSSI_TICKS     300     
 #define DAB_TIME_TICKS     310
 #define DAB_SHOWSIG_TICKS  490
 #define DAB_SHOWSERV_TICKS 500
 #define DAB_SHOWTIME_TICKS 510
+#define DAB_COVERAGE_TICKS 800
 
 void dabSetValidRssiTime(int newVal);
 void dabSetValidRssiThreshold(int newVal);
@@ -56,6 +58,8 @@ void dabShowSubChannelInfo(channelInfoType *cInfo);
 void dabStartDigitalService(uint32_t serviceID, uint32_t compID);
 void dabSaveLastService();
 void dabGetLastService(DABService *lastService);
+sysConfigType *dabGetSysConfig(void);
+void dabSaveSysConfig(void);
 void dabInterrupt(int gpio, int level, unsigned int ticks);
 void dabBegin();
 void dabCommand();

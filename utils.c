@@ -111,7 +111,7 @@ double freqIdToMHz(int id)
 {
     double f;
 
-    f = (double)dab_freq[id] / 1000.0;
+    f = (double)dabMhz[id] / 1000.0;
 
     return f;
 }
@@ -119,4 +119,12 @@ double freqIdToMHz(int id)
 double currentFreq()
 {
     return freqIdToMHz(dabShMem -> currentService.Freq);
+}
+
+dabFreqType *currentDabFreq()
+{
+    int freqId;
+
+    freqId = dabShMem -> currentService.Freq;
+    return &(dabShMem -> dabFreq[freqId]);
 }
