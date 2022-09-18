@@ -20,6 +20,9 @@ void httpd();
 
 #define WWW_ROOT               "/root/dab/www"
 
+#define MAX_AUDIO_MODES 4
+#define MAX_SERVICE_MODES 9
+
 typedef struct
 {
     char *name;

@@ -76,14 +76,14 @@ void jsonFreqs()
  
     dFreq = dabShMem -> dabFreq; 
 
-    sprintf(pBuf, "  \"numFreq\" : %d,\n", dabShMem -> dabFreqs);
+    sprintf(pBuf, "  \"numFreq\" : %d,\n", dabShMem -> numDabFreqs);
     tputs(pBuf);
     sprintf(pBuf, "  \"freqs\" : [\n");
     tputs(pBuf);
    
 
     freqId = 0;
-    c = dabShMem -> dabFreqs;
+    c = dabShMem -> numDabFreqs;
     while(c > 0)
     {
         tputs("      {\n"); 
@@ -131,8 +131,10 @@ void jsonSystem()
 {
     sprintf(pBuf, "  \"partNo\" : \"Si%d\",\n", dabShMem -> sysInfo.partNo);
     tputs(pBuf);
-    sprintf(pBuf, "  \"swVer\" : \"%d.%d.%d\",\n", dabShMem -> funcInfo.major,
-                       dabShMem -> funcInfo.minor, dabShMem -> funcInfo.build);
+    sprintf(pBuf, "  \"swVer\" : \"%d.%d.%d\",\n",
+                                        dabShMem -> sysInfo.funcInfo.major,
+                                        dabShMem -> sysInfo.funcInfo.minor,
+                                           dabShMem -> sysInfo.funcInfo.build);
     tputs(pBuf);
 }
 
@@ -140,9 +142,17 @@ void jsonEnsemble()
 {
     DABService *dServ;
     int c;
+    int freqId;
+    dabFreqType *dFreq;
 
     dServ = &(dabShMem -> service[0]);
     c = dabShMem -> numberofservices;
+
+    freqId = dabShMem -> currentService.Freq;
+    dFreq = &(dabShMem -> dabFreq[freqId]);
+
+    sprintf(pBuf, "  \"cuCount\" : \"%d\",\n", dFreq -> cuCount);
+    tputs(pBuf);
 
     sprintf(pBuf, "  \"numServices\" : \"%d\",\n", c);
     tputs(pBuf);
@@ -184,22 +194,26 @@ void jsonEnsemble()
 void jsonCurrent()
 {
     dabFreqType *dFreq;
+    channelInfoType *cInfo;
+    audioInfoType *aInfo;
     int freqId;
-    char timeStr[64];
+    char strBuf[64];
     char block[8];
 
     freqId = dabShMem -> currentService.Freq;
     dFreq = &(dabShMem -> dabFreq[freqId]); 
+    aInfo = &(dabShMem -> audioInfo);
+    cInfo = &(dabShMem -> channelInfo);
 
     if(dabShMem -> time.tm_year > 0)
     {
-        strftime(timeStr, 64, "%d %B %Y, %H:%M", &(dabShMem -> time));
+        strftime(strBuf, 64, "%d %B %Y, %H:%M", &(dabShMem -> time));
     }
     else
     {
-        strcpy(timeStr, "Date not available");
+        strcpy(strBuf, "Date not available");
     }
-    sprintf(pBuf, "  \"time\" : \"%s\",\n", timeStr);
+    sprintf(pBuf, "  \"time\" : \"%s\",\n", strBuf);
     tputs(pBuf);
 
     sprintf(pBuf, "  \"freqID\" : \"%d\",\n", dabShMem -> currentService.Freq);
@@ -231,6 +245,48 @@ void jsonCurrent()
     tputs(pBuf);
     sprintf(pBuf, "  \"ficQuality\" : \"%d %%\",\n",
                                                dFreq -> sigQuality.ficQuality);
+    tputs(pBuf);
+    if(cInfo -> serviceMode > MAX_SERVICE_MODES)
+    {
+        sprintf(pBuf, "  \"serviceMode\" : \"%d\",\n", cInfo -> serviceMode);
+    }
+    else
+    {
+        sprintf(pBuf, "  \"serviceMode\" : \"%s\",\n",
+                                           serviceModes[cInfo -> serviceMode]);
+    }
+    tputs(pBuf);
+
+    sprintf(pBuf, "  \"protectionInfo\" : \"");
+    if(cInfo -> protectionInfo < 6)
+    {
+        strcat(pBuf, "UEP ");
+    }
+    else
+    {
+        if(cInfo -> protectionInfo < 14)
+        {
+            strcat(pBuf, "EEP ");
+        }
+    }
+    sprintf(strBuf, "%d\",\n", cInfo -> protectionInfo);
+    strcat(pBuf, strBuf);
+    tputs(pBuf);
+
+    sprintf(pBuf, "  \"numCu\" : %d,\n", cInfo -> numCu);
+    tputs(pBuf);
+    sprintf(pBuf, "  \"bitRate\" : \"%d k\",\n", aInfo -> bitRate);
+    tputs(pBuf);
+    sprintf(pBuf, "  \"sampleRate\" : \"%d bps\",\n", aInfo -> sampleRate);
+    tputs(pBuf);
+    if(aInfo -> mode > MAX_AUDIO_MODES)
+    {
+        sprintf(pBuf, "  \"mode\" : \"%d\",\n", aInfo -> mode);
+    }
+    else
+    {
+        sprintf(pBuf, "  \"mode\" : \"%s\",\n", audioModes[aInfo -> mode]);
+    }
     tputs(pBuf);
 }
 
@@ -325,12 +381,14 @@ void httpSetChannel(char **params)
 {
     char *p1;
     dabCmdType dabCmd;
-    char *fName;
     int channelBlock;
     char strBuf[255];
 
     strcpy(strBuf, *params);
-    fName = strtok(strBuf, "&");
+
+    // skip filename in parameters
+    strtok(strBuf, "&");
+
     p1 = strtok(NULL, "&");
     if(p1 == NULL)
     {
@@ -347,18 +405,31 @@ void httpSetChannel(char **params)
     httpGetCurrent(params);
 }
 
+void setService(int serviceId, int compId)
+{
+    dabCmdType dabCmd;
+
+    dabCmd.params.service.ServiceID = serviceId;
+    dabCmd.params.service.CompID = compId;
+    dabCmd.cmd = DABCMD_TUNE;  
+    doCommand(&dabCmd, NULL);
+}
+
 void httpSetService(char **params)
 {
     char *p1;
     char *p2;
-    char *fName;
-    dabCmdType dabCmd;
     int serviceId;
     int compId;
     char strBuf[255];
+    DABService oldService;
+    DABService *currentService;
 
     strcpy(strBuf, *params);
-    fName = strtok(strBuf, "&");
+   
+    // skip over filename 
+    strtok(strBuf, "&");
+
     p1 = strtok(NULL, "&");
     p2 = strtok(NULL,"&");
     if(p1 == NULL || p2 == NULL)
@@ -367,13 +438,20 @@ void httpSetService(char **params)
         return;
     }
 
+    currentService = &(dabShMem -> currentService);
+    bcopy(currentService, &oldService, sizeof(DABService));
+
     serviceId = atoi(p1);
     compId = atoi(p2);
+    setService(serviceId, compId);
 
-    dabCmd.params.service.ServiceID = serviceId;
-    dabCmd.params.service.CompID = compId;
-    dabCmd.cmd = DABCMD_TUNE;  
-    doCommand(&dabCmd, NULL);
+    // 'Audio', DAB or DAB+ only allowed...
+    if(dabShMem -> channelInfo.serviceMode != 0 &&
+       dabShMem -> channelInfo.serviceMode != 4 &&
+       dabShMem -> channelInfo.serviceMode != 5)
+    {
+        setService(oldService.ServiceID, oldService.CompID);
+    }
 
     httpGetCurrent(params);
 }

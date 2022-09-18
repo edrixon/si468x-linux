@@ -39,6 +39,33 @@ httpHandlerType httpHandlers[] =
     { "", NULL }
 };
 
+char *audioModes[MAX_AUDIO_MODES] =
+{
+    "dual",
+    "mono",
+    "stereo",
+    "joint stereo"
+};
+
+char *serviceModes[MAX_SERVICE_MODES] =
+{
+//    "audio stream",
+    "dab",
+    "data stream",
+//    "fidc",
+    "data",
+//    "msc data",
+    "data",
+    "dab+",
+    "dab",
+//    "fic",
+    "data",
+//    "xpad",
+    "data",
+//    "no media"
+    "data"
+};
+
 #else
 
 extern char pBuf[];
@@ -47,6 +74,9 @@ extern int connFd;
 extern int listenFd;
 extern pid_t httpdPid;
 extern int webDone;
+
+extern char *audioModes[];
+extern char *serviceModes[];
 
 extern httpHandlerType httpHandlers[];
 extern httpHandlerType httpBuiltIn[];
