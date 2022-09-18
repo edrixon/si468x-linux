@@ -12,6 +12,7 @@ void cmdTune(char *);
 void cmdTuneFreq(char *);
 void cmdFreq(char *);
 void cmdGetChannelInfo(char *);
+void cmdChannelInfo(char *);
 void cmdAudioInfo(char *);
 void cmdSave(char *);
 void cmdVersion(char *);

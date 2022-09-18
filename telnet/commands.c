@@ -52,7 +52,7 @@ void cmdSquelch(char *ptr)
         }
     }
 
-    sprintf(pBuf, "Squelch level - %d dBuV\n", dabShMem -> validSignal.rssiThreshold);
+    sprintf(pBuf, "Squelch level - %d dBuV\n", dabShMem -> sysConfig.validSignal.rssiThreshold);
     tputs(pBuf);
 }
 
@@ -124,17 +124,22 @@ void cmdVersion(char *pPtr)
 void cmdSave(char *pPtr)
 {
     dabCmdType dabCmd;
+    dabFreqType *dFreq;
+    int freqId;
 
-    if(dabShMem -> dabServiceValid == TRUE)
+    freqId = dabShMem -> currentService.Freq;
+    dFreq = &(dabShMem -> dabFreq[freqId]);
+
+    if(dFreq -> serviceValid == TRUE)
     {
         dabCmd.cmd = DABCMD_SAVE;
         doCommand(&dabCmd, NULL);
 
-        tputs("Service saved\n");
+        tputs("Configuration saved\n");
     }
     else
     {
-        tputs("Service not valid - not saved\n");
+        tputs("Service not valid - configuration not saved\n");
     }
 }
 
@@ -150,10 +155,10 @@ void cmdScan(char *pPtr)
  
     dabShMem -> time.tm_year = 0;
 
-    sprintf(pBuf, "Scanning %d frequencies\n", dabShMem -> dabFreqs);
+    sprintf(pBuf, "Scanning %d frequencies\n", dabShMem -> numDabFreqs);
     tputs(pBuf);
 
-    for(c = 0; c < dabShMem -> dabFreqs; c++)
+    for(c = 0; c < dabShMem -> numDabFreqs; c++)
     {
         dabCmd.cmd = DABCMD_TUNEFREQ;  
         dabCmd.params.service.Freq = c;
@@ -247,7 +252,7 @@ void cmdEnsemble(char *pPtr)
 
     dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
 
-    if(dabShMem -> dabServiceValid == TRUE)
+    if(dFreq -> serviceValid == TRUE)
     {
         sprintf(pBuf, "Ensemble: %s\n\n", dFreq -> ensemble);
         tputs(pBuf);
@@ -302,20 +307,8 @@ void cmdEnsemble(char *pPtr)
     }
 }
 
-void cmdGetChannelInfo(char *cPtr)
+void showChannelInfo(channelInfoType *cInfo)
 {
-    dabCmdType dabCmd;
-    dabCmdRespType resp;
-    channelInfoType *cInfo;
-
-    bcopy(&(dabShMem -> currentService), &dabCmd.params.service,
-                                                           sizeof(DABService));
-
-    dabCmd.cmd = DABCMD_GETCHANNEL_INFO;  
-    doCommand(&dabCmd, &resp);
-
-    cInfo = &resp.channelInfo;
-
     tputs("  Mode: ");
     if(cInfo -> serviceMode > 8)
     {
@@ -357,6 +350,24 @@ void cmdGetChannelInfo(char *cPtr)
     tputs(pBuf);
 }
 
+void cmdChannelInfo(char *cPtr)
+{
+    showChannelInfo(&(dabShMem -> channelInfo));
+}
+
+void cmdGetChannelInfo(char *cPtr)
+{
+    dabCmdType dabCmd;
+    dabCmdRespType resp;
+
+    bcopy(&(dabShMem -> currentService), &dabCmd.params.service,
+                                                           sizeof(DABService));
+
+    dabCmd.cmd = DABCMD_GETCHANNEL_INFO;  
+    doCommand(&dabCmd, &resp);
+    showChannelInfo(&resp.channelInfo);
+}
+
 void cmdFreq(char *pPtr)
 {
     int c;
@@ -365,7 +376,7 @@ void cmdFreq(char *pPtr)
 
     if(*pPtr == '\0')
     {
-        for(c = 0; c < dabShMem -> dabFreqs; c++)
+        for(c = 0; c < dabShMem -> numDabFreqs; c++)
         {
             if((c % 20) == 0)
             {
@@ -503,7 +514,7 @@ void cmdTuneFreq(char *pPtr)
         cPtr = strtok(pPtr, " ");
         dabCmd.params.service.Freq = atoi(cPtr);
 
-        if(dabCmd.params.service.Freq >= dabShMem -> dabFreqs)
+        if(dabCmd.params.service.Freq >= dabShMem -> numDabFreqs)
         {
             tputs("Invalid frequency\n");
         }
@@ -534,7 +545,7 @@ void cmdValidAcqTime(char *ptr)
         doCommand(&dabCmd, NULL);
     }
 
-    sprintf(pBuf, "Valid ACQ time - %d ms\n", dabShMem -> validSignal.acqTime);
+    sprintf(pBuf, "Valid ACQ time - %d ms\n", dabShMem -> sysConfig.validSignal.acqTime);
     tputs(pBuf);
 }
 
@@ -551,7 +562,7 @@ void cmdValidRssiTime(char *ptr)
         doCommand(&dabCmd, NULL);
     }
 
-    sprintf(pBuf, "Valid RSSI time - %d ms\n", dabShMem -> validSignal.rssiTime);
+    sprintf(pBuf, "Valid RSSI time - %d ms\n", dabShMem -> sysConfig.validSignal.rssiTime);
     tputs(pBuf);
 }
 
@@ -568,7 +579,7 @@ void cmdValidSyncTime(char *ptr)
         doCommand(&dabCmd, NULL);
     }
 
-    sprintf(pBuf, "Valid sync time - %d ms\n", dabShMem -> validSignal.syncTime);
+    sprintf(pBuf, "Valid sync time - %d ms\n", dabShMem -> sysConfig.validSignal.syncTime);
     tputs(pBuf);
 }
 
@@ -585,7 +596,7 @@ void cmdValidDetectTime(char *ptr)
         doCommand(&dabCmd, NULL);
     }
 
-    sprintf(pBuf, "Valid detect time - %d ms\n", dabShMem -> validSignal.detectTime);
+    sprintf(pBuf, "Valid detect time - %d ms\n", dabShMem -> sysConfig.validSignal.detectTime);
     tputs(pBuf);
 }
 

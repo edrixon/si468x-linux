@@ -13,7 +13,7 @@ CLICOMMAND cliCmd[] =
 {
     { "ainfo", "", cmdAudioInfo },
     { "acqtime", "acqtime [<time ms>]", cmdValidAcqTime },
-    { "chaninfo", "", cmdGetChannelInfo },
+    { "cinfo", "", cmdChannelInfo },
     { "cstatus", "cstatus [<interval>]", cmdShowStatusCont },
     { "dettime", "dettime [<time ms>]", cmdValidDetectTime },
     { "dls", "", cmdShowDls },
