@@ -45,14 +45,14 @@ body {
 /* Create two unequal columns that sits next to each other */
 /* Sidebar/left column */
 .side {
-  flex: 30%;
+  flex: 25%;
   background-color: #f1f1f1;
   padding: 20px;
 }
 
 /* Main column */
 .main {
-  flex: 70%;
+  flex: 75%;
   background-color: white;
   padding: 20px;
 }
@@ -66,8 +66,9 @@ body {
 
 .image {
   background-color: #aaa;
+  align-content: center;
   width: 100%;
-  padding: 10px;
+  padding: 5px;
 }
 
 .player {

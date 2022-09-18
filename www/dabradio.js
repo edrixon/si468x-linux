@@ -71,7 +71,7 @@ function initPlayer() {
 
   isPlaying = false;
 
-  audioUrl = "http://192.168.1.63:8000/dab.mp3";
+  audioUrl = "http://dabrx.ednet.pri:8000/dab.mp3";
 
 }
 
@@ -90,6 +90,9 @@ function initServiceInfo() {
 
   myP = document.getElementById('ensembleName');
   myP.textContent = "Ensemble: ??";
+
+  myP = document.getElementById('channelInfo');
+  myP.textContent = "Bit rate: ??  Mode: ??  Service: ??  Protection: ??";
 
   myP = document.getElementById('signalQuality');
   myP.textContent = "RSSI: ?? dBuV  SNR: ?? dB  CNR: ?? dB  FIC quality: ?? %"; 
@@ -111,6 +114,14 @@ function populateServiceInfo() {
 
   myP = document.getElementById('channelFreq');
   myP.textContent = "Frequency: " + currentService.freq;
+
+  myP = document.getElementById('channelInfo');
+  myP.textContent = "Bit rate: " + currentService.bitRate;
+  myP.textContent = myP.textContent + "  Mode: " + currentService.mode;
+  myP.textContent = myP.textContent + "  Service: "
+                                                  + currentService.serviceMode;
+  myP.textContent = myP.textContent + "  Protection: "
+                                               + currentService.protectionInfo;
 
   myP = document.getElementById('ensembleName');
   myP.textContent = "Ensemble: " + currentService.ensembleName;
