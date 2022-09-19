@@ -24,6 +24,9 @@
 
 int main(int argc, char *argv[])
 {
+    fprintf(stderr, "%d\n", getpid());
+    setvbuf(stdout, NULL, _IOLBF, 0);
+
     printf("\nRemote DAB receiver telnet server V1.0\n");
 
     dabShMem = shmAttach();
