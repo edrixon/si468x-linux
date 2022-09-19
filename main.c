@@ -109,6 +109,9 @@ void dabGpioInit()
 
 int main(int argc, char *arv[])
 {
+    fprintf(stderr, "%d\n", getpid());
+    setvbuf(stdout, NULL, _IOLBF, 0);
+
     printf("\n");
     printf("DAB receiver control engine version %d.%d\n",
               (DAB_ENGINE_VERSION & 0xff00) >> 8, DAB_ENGINE_VERSION & 0x00ff);

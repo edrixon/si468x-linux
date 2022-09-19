@@ -1,0 +1,11 @@
+#!/bin/sh
+
+pid=`cat /tmp/httpd.pid`
+/usr/bin/kill -s SIGINT $pid
+
+pid=`cat /tmp/telnetd.pid`
+/usr/bin/kill -s SIGINT $pid
+
+pid=`cat /tmp/dab.pid`
+/usr/bin/kill -s SIGINT $pid
+

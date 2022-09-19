@@ -1,0 +1,7 @@
+#!/bin/sh
+
+cd /root/dab
+
+nohup ./dab 2> /tmp/dab.pid | mcast/mcast-tx 1 > /dev/null 2>&1 &
+nohup ./telnet/telnetd 2> /tmp/telnetd.pid | mcast/mcast-tx 2 > /dev/null 2>&1 &
+nohup ./httpd/httpd 2> /tmp/httpd.pid | mcast/mcast-tx 3 > /dev/null 2>&1 &
