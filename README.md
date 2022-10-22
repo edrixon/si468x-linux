@@ -1,6 +1,8 @@
 DAB radio using DABshield Arduino board running on a Raspberry Pi
 
 Shield is connected to Raspberry Pi SPI interface and a couple of GPIO pins.
+Built for dietPi Linux distribution.
+Needs pigpio, icecast, darkice, dma, ntpd and gpsd.
 
 Uses gpsd for coverage logging.
 
