@@ -1,3 +1,5 @@
+#define MODE_STR_NUM 4
+
 #ifdef __IN_MAIN
 
 #include "commands.h"
@@ -20,8 +22,10 @@ CLICOMMAND cliCmd[] =
     { "ensemble", "", cmdEnsemble },
     { "exit", "", exitCmd },
     { "freq", "freq [<freq id>]", cmdFreq },
+    { "gpsinfo", "", cmdGpsInfo },
     { "help", "", helpCmd },
     { "intcount", "", cmdShowInterruptCount },
+    { "logmode", "logmode [<mode>]", cmdLogMode },
     { "reset", "", cmdResetRadio },
     { "rssi", "", cmdRssi },
     { "save", "", cmdSave },
@@ -94,6 +98,21 @@ char *ptyNames[] =
     "not use"
 };
 
+char *logModes[] =
+{
+    "scan",
+    "coverage",
+    ""
+};
+
+char *gpsModes[] =
+{
+    "n/a",
+    "none",
+    "2D",
+    "3D"
+};
+
 char pBuf[255];
 
 int connFd;
@@ -108,8 +127,6 @@ unsigned long int dlsMillis;
 
 time_t lastTime;
 
-telnetUserType telnetUsers[TELNETD_MAXCONNECTIONS];
-
 #else
 
 extern char cliBuffer[];
@@ -123,6 +140,7 @@ extern CLICOMMAND cliCmd[];
 extern char *aMode[];
 extern char *serviceModeNames[];
 extern char *ptyNames[];
+extern char *gpsModes[];
 
 extern char pBuf[];
 
@@ -137,7 +155,5 @@ extern int showDls;
 extern unsigned long int dlsMillis;
 
 extern time_t lastTime;
-
-extern telnetUserType telnetUsers[];
 
 #endif

@@ -2,6 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <gps.h>
+#include <math.h>
 
 #include "../types.h"
 #include "../dabcmd.h"
@@ -260,7 +262,7 @@ void cmdEnsemble(char *pPtr)
         sprintf(pBuf, "  Component ID\tService ID\tType\tPTY\tProgramme name\n");
         tputs(pBuf);
 
-        for(c = 0; c < 65; c++)
+        for(c = 0; c < 77; c++)
         {
             tputs("-");
         }
@@ -296,7 +298,10 @@ void cmdEnsemble(char *pPtr)
                 tputs(pBuf);
             }
 
-            sprintf(pBuf, "%s\n", dabShMem -> service[c].Label);
+            sprintf(pBuf, "%s\t", dabShMem -> service[c].Label);
+            tputs(pBuf);
+
+            sprintf(pBuf, "(%s)\n", dabShMem -> service[c].shortLabel);
             tputs(pBuf);
         }
     }
@@ -600,3 +605,105 @@ void cmdValidDetectTime(char *ptr)
     tputs(pBuf);
 }
 
+void cmdLogMode(char *ptr)
+{
+    dabCmdType dabCmd;
+    int runMode;
+    char *runModeStr;
+
+    runMode = -1;
+
+    if(*ptr != '\0')
+    {
+        if(strcmp(ptr, "coverage") == 0)
+        {
+            runMode = LOGGER_COVERAGE;
+        }
+        else
+        {
+            if(strcmp(ptr, "scan") == 0)
+            {
+                runMode = LOGGER_SCAN;
+            }
+        }
+    }
+
+    dabCmd.cmd = DABCMD_LOGGERMODE;
+    dabCmd.params.runMode = runMode; 
+    doCommand(&dabCmd, NULL);
+
+    runMode = dabShMem -> dabResp.runMode;
+    switch(runMode)
+    {
+        case LOGGER_COVERAGE:
+            runModeStr = "coverage";
+            break;
+
+        case LOGGER_SCAN:
+            runModeStr = "scan";
+            break;
+
+        default:
+            runModeStr = "invalid";
+    }
+
+    sprintf(pBuf, "Logger run mode - %s\n", runModeStr);
+    tputs(pBuf);
+}
+
+void cmdGpsInfo(char *ptr)
+{
+    struct gps_data_t gps_data;
+    int c;
+
+    if(gps_open("localhost", "2947", &gps_data) != 0)
+    {
+        tputs("gpsd open error\n");
+        return;
+    }
+
+    gps_stream(&gps_data, WATCH_ENABLE | WATCH_JSON, NULL);
+
+    c = 10;
+    while(c)
+    {
+    gps_waiting(&gps_data, 5000000);
+    if(gps_read(&gps_data, NULL, 0) == -1)
+    {
+        tputs("gpsd read error\n");
+        return;
+    }
+
+    if((gps_data.set & MODE_SET) != MODE_SET)
+    {
+        tputs("No GPS mode\n");
+    }
+
+    if(gps_data.fix.mode < 0 || gps_data.fix.mode >= MODE_STR_NUM)
+    {
+        gps_data.fix.mode = 0;
+    }
+
+    sprintf(pBuf, "Device - %s\n", gps_data.dev.path);
+    tputs(pBuf);
+    sprintf(pBuf, "Driver - %s\n", gps_data.dev.driver);
+    tputs(pBuf);
+
+    if(isfinite(gps_data.fix.latitude) &&
+       isfinite(gps_data.fix.longitude))
+    {
+        sprintf(pBuf, "%s %0.6f %0.6f\n", gpsModes[gps_data.fix.mode],
+                                gps_data.fix.latitude, gps_data.fix.longitude);
+        tputs(pBuf);
+    }
+    else
+    {
+        tputs("No fix!\n");
+    }
+
+        c--;
+    }
+
+    gps_stream(&gps_data, WATCH_DISABLE, NULL);
+    gps_close(&gps_data);
+}

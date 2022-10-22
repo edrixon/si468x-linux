@@ -1,3 +1,8 @@
+//
+// Ed's dead simple Telnet server
+// Provides CLI control of DAB radio
+//
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>

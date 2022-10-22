@@ -25,5 +25,7 @@ void cmdValidAcqTime(char *);
 void cmdValidRssiTime(char *);
 void cmdValidDetectTime(char *);
 void cmdValidSyncTime(char *);
+void cmdLogMode(char *);
+void cmdGpsInfo(char *);
 
 #endif
