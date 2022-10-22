@@ -5,6 +5,11 @@
 #include <semaphore.h>
 #include <time.h>
 
+#define LOGGER_INIT      0
+#define LOGGER_SCAN      1
+#define LOGGER_COVERAGE  2
+#define LOGGER_STARTWAIT 3
+
 #define DAB_MAX_FREQS    80
 #define DAB_MAX_SERVICES 16
 #define DAB_MAX_SERVICEDATA_LEN 128
@@ -12,13 +17,17 @@
 #define DAB_ENGINE_READY    0x55
 #define DAB_ENGINE_NOTREADY 0x00
 
+#define DAB_SESSION_TELNET  0
+#define DAB_SESSION_HTTP    1
+
 typedef unsigned char boolean;
 
 typedef struct
 {
-    pid_t pid;
+    int typeOfSession;
     char *clientAddr[20];
-} telnetUserType;
+    void *nextUser;
+} remoteUserType;
 
 typedef struct
 {
@@ -78,16 +87,19 @@ typedef struct
     unsigned int  ServiceID;
     unsigned int  CompID;
     char          Label[17];
+    char          shortLabel[17];
     unsigned char programmeType;
 } DABService;
 
 typedef struct
 {
     int state;
+    int runMode;
     int freq;
     DABService monitorService;
     DABService loggingService;
     DABService *currentService;
+    char logFilename[64];
 } dabLoggerType;
 
 typedef struct
@@ -115,11 +127,13 @@ typedef union
     int acqTime;
     int syncTime;
     int detectTime;
+    int runMode;
 } paramType;
 
 typedef union
 {
     channelInfoType channelInfo;
+    int runMode;
 } dabCmdRespType;
 
 typedef struct
@@ -144,8 +158,18 @@ typedef struct
     DABService lastService;
     validSignalType validSignal;
     int coverageTime;
-    int loggerTime;
+    char logFilename[255];
 } sysConfigType;
+
+typedef struct
+{
+    time_t seconds;
+    int fix;
+    double latitude;
+    double longitude;
+    double altitude;
+    double speed;
+} gpsInfoType;
 
 typedef struct
 {
@@ -154,6 +178,7 @@ typedef struct
     sem_t semaphore;
     sysConfigType sysConfig;
     sysInfoType sysInfo;
+    gpsInfoType gpsInfo;
     unsigned long int interruptCount;
     double audioLevel;
     unsigned int audioLevelRaw;
@@ -171,6 +196,7 @@ typedef struct
     dabFreqType dabFreq[DAB_MAX_FREQS];
     dabCmdType dabCmd;
     dabCmdRespType dabResp;
+    remoteUserType *remoteUsers;
     int telnetUsers;
     int httpUsers;
 } dabShMemType;

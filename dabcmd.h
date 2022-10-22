@@ -14,6 +14,7 @@
 #define DABCMD_SETACQTIME        0x1009
 #define DABCMD_SETSYNCTIME       0x100a
 #define DABCMD_SETDETECTTIME     0x100b
+#define DABCMD_LOGGERMODE        0x100c
 #define DABCMD_EXIT              0x1099
 
 #define DABRET_READY             0x0000

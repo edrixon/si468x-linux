@@ -89,14 +89,19 @@ void dabShmInit()
     dabShMem -> dabCmd.cmd = DABCMD_NONE;
     dabShMem -> dabCmd.rtn = DABRET_READY;
 
+    dabShMem -> remoteUsers = NULL;
+
     sem_init(&(dabShMem -> semaphore), 99, 1);
 
 }
 
 
-void dabGpioInit()
+int dabGpioInit()
 {
-    gpioInitialise();
+    if(gpioInitialise() < 0)
+    {
+        return -1;
+    }
 
     gpioSetMode(DAB_RESET_PIN, PI_OUTPUT);
     gpioSetMode(DAB_INT_PIN, PI_INPUT);
@@ -105,11 +110,17 @@ void dabGpioInit()
 
     gpioSetISRFunc(DAB_INT_PIN, FALLING_EDGE, -1, dabInterrupt);
 
+    return 0;
 }
 
 int main(int argc, char *arv[])
 {
     fprintf(stderr, "%d\n", getpid());
+
+    // Turn off buffering for stdout
+    // To allow stdout to be re-directed to mcast-tx
+    // and displayed immediately with mcast-rx otherwise
+    // it's displayed in 4k blocks...
     setvbuf(stdout, NULL, _IOLBF, 0);
 
     printf("\n");
@@ -120,16 +131,23 @@ int main(int argc, char *arv[])
     shmBegin();
     dabShmInit();
 
-    dabGpioInit();
+    if(dabGpioInit() != 0)
+    {
+        printf("Error: initialising GPIO library\n");
+        exit(1);
+    }
 
     spi = spiOpen(SPI_SI_CHANNEL, SPI_SPEED, SPI_FLAGS);
     if(spi < 0)
     {
         printf("Error: opening SPI port for Si468x\n");
+        exit(1);
     }
 
     dabMain();
 
     spiClose(spi);
     gpioTerminate();
+
+    return 0;
 }

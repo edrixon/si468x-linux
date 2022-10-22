@@ -9,3 +9,9 @@ pid=`cat /tmp/telnetd.pid`
 pid=`cat /tmp/dab.pid`
 /usr/bin/kill -s SIGINT $pid
 
+pid=`cat /tmp/dabgps.pid`
+/usr/bin/kill $pid
+
+x=`ps -C darkice`
+pid=`echo $x | cut -f5 -d' '`
+/usr/bin/kill $pid

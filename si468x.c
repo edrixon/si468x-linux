@@ -1,3 +1,9 @@
+//
+// Ed's Si468x Linux driver for DABShield Arduino board
+// Code based on Arduino C++ library
+// Supports DAB functions only
+//
+
 #include <stdio.h>
 #include <sys/time.h>
 #include <time.h>
@@ -57,9 +63,9 @@ void siCts()
             break;
         }
     }
-    while ((spiBuf[1] & 0x80) == 0x00);
+    while((spiBuf[1] & 0x80) == 0x00);
 
-    if ((spiBuf[1] & 0x40) == 0x40)
+    if((spiBuf[1] & 0x40) == 0x40)
     {
         siResponseN(5);
         command_error = 0x80 | spiBuf[5];
@@ -166,7 +172,7 @@ void siHostLoad()
 
         siWrite(i);
         siCts();
-   }
+    }
 }
 
 void siFlashSetProperty(uint16_t property, uint16_t value)

@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall
-LIB=-lpigpio -lrt -lm
+LIB=-lpigpio -lrt -lm -lgps
 LDFLAGS=-pthread
 OBJS=dab.o dablogger.o main.o shm.o si468x.o utils.o timers.o
 INC=dab.h dabcmd.h dablogger.h dabshmem.h globals.h shm.h \

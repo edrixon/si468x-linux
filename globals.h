@@ -16,18 +16,10 @@ dabTimerType dabTimers[] =
         TRUE
     },
     {
-        DAB_LOGGER_TICKS,
-        DAB_LOGGER_TICKS,
+        DAB_LOGGER_SCAN_TICKS,
+        DAB_LOGGER_SCAN_TICKS,
         dabLoggerMain,
         "LOGGER",
-        TRUE,
-        FALSE
-    },
-    {
-        DAB_COVERAGE_TICKS,
-        DAB_COVERAGE_TICKS,
-        dabLoggerMain,
-        "COVERAGE",
         TRUE,
         FALSE
     },

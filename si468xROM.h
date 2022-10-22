@@ -364,6 +364,3 @@ const unsigned char rom_patch_016[] = {
 	0x00, 0x00, 0x00, 0x00
 };
 // End of Block 1
-
-
-  

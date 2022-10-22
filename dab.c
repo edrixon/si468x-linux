@@ -127,6 +127,9 @@ void dabParseServiceList(void)
 	uint16_t numberofcomponents;
 	uint16_t listsize;
 	uint16_t version;
+        int mask;
+        int c;
+        char *cPtr;
 
 	listsize = spiBytesTo16(&spiBuf[5]);
 	version = spiBytesTo16(&spiBuf[7]);
@@ -176,6 +179,19 @@ void dabParseServiceList(void)
         siResponseN(26);
 
         dabShMem -> service[i].programmeType = spiBuf[5];
+        mask = (spiBuf[26] << 8) | spiBuf[25];
+        cPtr = dabShMem -> service[i].shortLabel;
+        for(c = 0; c < 16; c++)
+        {
+            if((mask & 0x8000) == 0x8000)
+            {
+                *cPtr = dabShMem -> service[i].Label[c];
+                cPtr++;
+            }
+
+            mask = mask << 1;
+        }
+        *cPtr = '\0';
     }
 }
 
@@ -587,6 +603,12 @@ void dabCommand()
                dabSetValidDetectTime(dabShMem -> dabCmd.params.detectTime);
                break;
 
+            case DABCMD_LOGGERMODE:
+               printf("  **Set dabLogger run mode\n");
+               dabShMem -> dabResp.runMode =
+                        dabLoggerSetRunMode(dabShMem -> dabCmd.params.runMode);
+               break;
+
             case DABCMD_EXIT:
                printf("  **Exit\n");
                dabDone = TRUE;
@@ -796,9 +818,6 @@ sysConfigType *dabGetSysConfig()
         sConfig -> validSignal.acqTime = DAB_VALID_ACQ_TIME;
         sConfig -> validSignal.syncTime = DAB_VALID_SYNC_TIME;
         sConfig -> validSignal.detectTime = DAB_VALID_DETECT_TIME;
-
-        sConfig -> coverageTime = DAB_COVERAGE_TICKS;
-        sConfig -> loggerTime = DAB_LOGGER_TICKS;
     }
     else
     {
