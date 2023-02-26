@@ -27,7 +27,6 @@
 // "Powered up" pin - turned on in /boot/config.txt
 // Goes off when everything is shutdown
 // Don't use this pin for anything else 
-// an extra line of code
 #define DAB_PUP_PIN     12
 
 // SPI setup
