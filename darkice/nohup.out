@@ -1,0 +1,18 @@
+DarkIce 1.3 live audio streamer, http://code.google.com/p/darkice/
+Copyright (c) 2000-2007, Tyrell Hungary, http://tyrell.hu/
+Copyright (c) 2008-2013, Akos Maroy and Rafael Diniz
+This is free software, and you are welcome to redistribute it 
+under the terms of The GNU General Public License version 3 or
+any later version.
+
+Using config file: /root/dab/darkice/darkice.cfg
+Using ALSA DSP input device: plughw:1
+Using POSIX real-time scheduling, priority 4
+AlsaDspSource :: Buffer overrun!
+AlsaDspSource :: Buffer overrun!
+AlsaDspSource :: Buffer overrun!
+AlsaDspSource :: Buffer overrun!
+AlsaDspSource :: Buffer overrun!
+AlsaDspSource :: Buffer overrun!
+AlsaDspSource :: Buffer overrun!
+AlsaDspSource :: Buffer overrun!

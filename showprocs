@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DABPROCS="dab telnetd darkice icecast"
+DABPROCS="dab gpsd httpd telnetd icecast mcast"
 
 for p in $DABPROCS
 do

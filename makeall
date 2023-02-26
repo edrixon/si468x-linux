@@ -1,0 +1,13 @@
+#!/bin/sh
+
+DIRS=". gps telnet httpd mcast logger2kml"
+
+here=`pwd`
+
+make hexdump
+
+for d in $DIRS
+do
+    cd $here/$d
+    make $1
+done

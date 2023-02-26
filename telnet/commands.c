@@ -2,10 +2,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <gps.h>
+#include <math.h>
+#include <dirent.h>
+#include <errno.h>
+#include <sys/stat.h>
 
 #include "../types.h"
 #include "../dabcmd.h"
 #include "../dabshmem.h"
+#include "../dab.h"
 #include "commands.h"
 #include "telnetd.h"
 #include "cli.h"
@@ -52,7 +58,7 @@ void cmdSquelch(char *ptr)
         }
     }
 
-    sprintf(pBuf, "Squelch level - %d dBuV\n", dabShMem -> validSignal.rssiThreshold);
+    sprintf(pBuf, "Squelch level - %d dBuV\n", dabShMem -> sysConfig.validSignal.rssiThreshold);
     tputs(pBuf);
 }
 
@@ -103,7 +109,7 @@ void cmdShowStatusCont(char *ptr)
     }
     else
     {
-        sprintf(pBuf, "Status updates for every %d seconds\n",
+        sprintf(pBuf, "Status updates every %d seconds\n",
                                                    showStatusTime);
         tputs(pBuf);
     }
@@ -124,17 +130,22 @@ void cmdVersion(char *pPtr)
 void cmdSave(char *pPtr)
 {
     dabCmdType dabCmd;
+    dabFreqType *dFreq;
+    int freqId;
 
-    if(dabShMem -> dabServiceValid == TRUE)
+    freqId = dabShMem -> currentService.Freq;
+    dFreq = &(dabShMem -> dabFreq[freqId]);
+
+    if(dFreq -> serviceValid == TRUE)
     {
         dabCmd.cmd = DABCMD_SAVE;
         doCommand(&dabCmd, NULL);
 
-        tputs("Service saved\n");
+        tputs("Configuration saved\n");
     }
     else
     {
-        tputs("Service not valid - not saved\n");
+        tputs("Service not valid - configuration not saved\n");
     }
 }
 
@@ -150,10 +161,10 @@ void cmdScan(char *pPtr)
  
     dabShMem -> time.tm_year = 0;
 
-    sprintf(pBuf, "Scanning %d frequencies\n", dabShMem -> dabFreqs);
+    sprintf(pBuf, "Scanning %d frequencies\n", dabShMem -> numDabFreqs);
     tputs(pBuf);
 
-    for(c = 0; c < dabShMem -> dabFreqs; c++)
+    for(c = 0; c < dabShMem -> numDabFreqs; c++)
     {
         dabCmd.cmd = DABCMD_TUNEFREQ;  
         dabCmd.params.service.Freq = c;
@@ -212,12 +223,13 @@ void cmdRssi(char *pPtr)
 
     sprintf(pBuf,
        "  RSSI: %d dBuV  SNR: %d dB  CNR: %d dB"
-       "  FIC Quality: %d %%  FIB errors: %d\n",
+       "  FIC Quality: %d %%  FIB errors: %d (%0.2f per sec)\n",
                                       dFreq -> sigQuality.rssi,
                                       dFreq -> sigQuality.snr,
                                       dFreq -> sigQuality.cnr,
                                       dFreq -> sigQuality.ficQuality,
-                                      dFreq -> sigQuality.fibErrorCount);
+                                      dFreq -> sigQuality.fibErrorCount,
+                                      dFreq -> sigQuality.fibErrorRate);
     tputs(pBuf);
 }
 
@@ -247,7 +259,7 @@ void cmdEnsemble(char *pPtr)
 
     dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
 
-    if(dabShMem -> dabServiceValid == TRUE)
+    if(dFreq -> serviceValid == TRUE)
     {
         sprintf(pBuf, "Ensemble: %s\n\n", dFreq -> ensemble);
         tputs(pBuf);
@@ -255,7 +267,7 @@ void cmdEnsemble(char *pPtr)
         sprintf(pBuf, "  Component ID\tService ID\tType\tPTY\tProgramme name\n");
         tputs(pBuf);
 
-        for(c = 0; c < 65; c++)
+        for(c = 0; c < 77; c++)
         {
             tputs("-");
         }
@@ -291,7 +303,10 @@ void cmdEnsemble(char *pPtr)
                 tputs(pBuf);
             }
 
-            sprintf(pBuf, "%s\n", dabShMem -> service[c].Label);
+            sprintf(pBuf, "%-18s", dabShMem -> service[c].Label);
+            tputs(pBuf);
+
+            sprintf(pBuf, "(%s)\n", dabShMem -> service[c].shortLabel);
             tputs(pBuf);
         }
     }
@@ -302,20 +317,8 @@ void cmdEnsemble(char *pPtr)
     }
 }
 
-void cmdGetChannelInfo(char *cPtr)
+void showChannelInfo(channelInfoType *cInfo)
 {
-    dabCmdType dabCmd;
-    dabCmdRespType resp;
-    channelInfoType *cInfo;
-
-    bcopy(&(dabShMem -> currentService), &dabCmd.params.service,
-                                                           sizeof(DABService));
-
-    dabCmd.cmd = DABCMD_GETCHANNEL_INFO;  
-    doCommand(&dabCmd, &resp);
-
-    cInfo = &resp.channelInfo;
-
     tputs("  Mode: ");
     if(cInfo -> serviceMode > 8)
     {
@@ -357,6 +360,24 @@ void cmdGetChannelInfo(char *cPtr)
     tputs(pBuf);
 }
 
+void cmdChannelInfo(char *cPtr)
+{
+    showChannelInfo(&(dabShMem -> channelInfo));
+}
+
+void cmdGetChannelInfo(char *cPtr)
+{
+    dabCmdType dabCmd;
+    dabCmdRespType resp;
+
+    bcopy(&(dabShMem -> currentService), &dabCmd.params.service,
+                                                           sizeof(DABService));
+
+    dabCmd.cmd = DABCMD_GETCHANNEL_INFO;  
+    doCommand(&dabCmd, &resp);
+    showChannelInfo(&resp.channelInfo);
+}
+
 void cmdFreq(char *pPtr)
 {
     int c;
@@ -365,7 +386,7 @@ void cmdFreq(char *pPtr)
 
     if(*pPtr == '\0')
     {
-        for(c = 0; c < dabShMem -> dabFreqs; c++)
+        for(c = 0; c < dabShMem -> numDabFreqs; c++)
         {
             if((c % 20) == 0)
             {
@@ -503,7 +524,7 @@ void cmdTuneFreq(char *pPtr)
         cPtr = strtok(pPtr, " ");
         dabCmd.params.service.Freq = atoi(cPtr);
 
-        if(dabCmd.params.service.Freq >= dabShMem -> dabFreqs)
+        if(dabCmd.params.service.Freq >= dabShMem -> numDabFreqs)
         {
             tputs("Invalid frequency\n");
         }
@@ -534,7 +555,7 @@ void cmdValidAcqTime(char *ptr)
         doCommand(&dabCmd, NULL);
     }
 
-    sprintf(pBuf, "Valid ACQ time - %d ms\n", dabShMem -> validSignal.acqTime);
+    sprintf(pBuf, "Valid ACQ time - %d ms\n", dabShMem -> sysConfig.validSignal.acqTime);
     tputs(pBuf);
 }
 
@@ -551,7 +572,7 @@ void cmdValidRssiTime(char *ptr)
         doCommand(&dabCmd, NULL);
     }
 
-    sprintf(pBuf, "Valid RSSI time - %d ms\n", dabShMem -> validSignal.rssiTime);
+    sprintf(pBuf, "Valid RSSI time - %d ms\n", dabShMem -> sysConfig.validSignal.rssiTime);
     tputs(pBuf);
 }
 
@@ -568,7 +589,7 @@ void cmdValidSyncTime(char *ptr)
         doCommand(&dabCmd, NULL);
     }
 
-    sprintf(pBuf, "Valid sync time - %d ms\n", dabShMem -> validSignal.syncTime);
+    sprintf(pBuf, "Valid sync time - %d ms\n", dabShMem -> sysConfig.validSignal.syncTime);
     tputs(pBuf);
 }
 
@@ -585,7 +606,212 @@ void cmdValidDetectTime(char *ptr)
         doCommand(&dabCmd, NULL);
     }
 
-    sprintf(pBuf, "Valid detect time - %d ms\n", dabShMem -> validSignal.detectTime);
+    sprintf(pBuf, "Valid detect time - %d ms\n", dabShMem -> sysConfig.validSignal.detectTime);
     tputs(pBuf);
 }
 
+void cmdLogMode(char *ptr)
+{
+    dabCmdType dabCmd;
+    int runMode;
+    char *runModeStr;
+
+    runMode = -1;
+
+    if(*ptr != '\0')
+    {
+        if(strcmp(ptr, "coverage") == 0)
+        {
+            runMode = LOGGER_COVERAGE;
+        }
+        else
+        {
+            if(strcmp(ptr, "scan") == 0)
+            {
+                runMode = LOGGER_SCAN;
+            }
+        }
+    }
+
+    dabCmd.cmd = DABCMD_LOGGERMODE;
+    dabCmd.params.runMode = runMode; 
+    doCommand(&dabCmd, NULL);
+
+    runMode = dabShMem -> dabResp.runMode;
+    switch(runMode)
+    {
+        case LOGGER_COVERAGE:
+            runModeStr = "coverage";
+            break;
+
+        case LOGGER_SCAN:
+            runModeStr = "scan";
+            break;
+
+        default:
+            runModeStr = "invalid";
+    }
+
+    sprintf(pBuf, "Logger run mode - %s\n", runModeStr);
+    tputs(pBuf);
+}
+
+void cmdGpsInfo(char *ptr)
+{
+    gpsInfoType *gpsInfo;
+
+    gpsInfo = &(dabShMem -> gpsInfo);
+
+    if(isfinite(gpsInfo -> latitude) && isfinite(gpsInfo -> longitude))
+    {
+        sprintf(pBuf, "  GPS fix: %s\n", gpsModes[gpsInfo -> fix]);
+        tputs(pBuf);
+
+        if(strcmp(ptr, "brief") != 0)
+        {
+            sprintf(pBuf, "  Position: %0.6f %0.6f\n",
+                                    gpsInfo -> latitude, gpsInfo -> longitude);
+            tputs(pBuf);
+            sprintf(pBuf, "  Altitude: %0.2f m\n", gpsInfo -> altitude);
+            tputs(pBuf);
+            sprintf(pBuf, "  Speed: %0.2f m/s\n", gpsInfo -> speed);
+            tputs(pBuf);
+        }
+    }
+    else
+    {
+        tputs("  No GPS fix!\n");
+    }
+}
+
+void cmdListFiles(char *ptr)
+{
+    DIR *dp;
+    struct dirent *dEnt;
+    struct stat statBuff;
+    struct tm *tmTime;
+    char strBuff[300];
+    int fileCount;
+    unsigned long int totalSize;
+
+    dp = opendir(LOGDIR);
+    if(dp == NULL)
+    {
+        tputs("Can't open directory\n");
+        return;
+    }
+
+    sprintf(pBuf, "Directory listing of \"%s\"\n", LOGDIR);
+    tputs(pBuf);
+
+    fileCount = 0;
+    totalSize = 0;
+
+    do
+    {
+        dEnt = readdir(dp);
+        if(dEnt != NULL)
+        {
+            if(strcmp(dEnt -> d_name, ".") != 0 &&
+               strcmp(dEnt -> d_name, "..") != 0)
+            {
+                sprintf(strBuff, "%s/%s", LOGDIR, dEnt -> d_name);
+                stat(strBuff, &statBuff);
+
+                if(dEnt -> d_type == DT_REG)
+                {
+                    fileCount++;
+                    totalSize = totalSize + statBuff.st_size;
+
+                    tmTime = localtime(&statBuff.st_mtime);
+                    strftime(strBuff, 80, "%d/%m/%y %H:%M  ", tmTime);
+
+                    sprintf(pBuf, "  %s %16ld %s\n",
+                                    strBuff, statBuff.st_size, dEnt -> d_name);
+                    tputs(pBuf);
+                }
+            }
+        }
+    }
+    while(dEnt != NULL);
+
+    sprintf(pBuf, "%16d File(s)     %ld bytes\n\n", fileCount, totalSize);
+    tputs(pBuf);
+
+    closedir(dp);
+}
+
+void cmdRemoveFile(char *ptr)
+{
+    char fName[256];
+
+    if(*ptr == '\0')
+    {
+        tputs("Missing filename\n");
+    }
+    else
+    {
+        sprintf(fName, "%s/%s", LOGDIR, ptr);
+        if(unlink(fName) == 0)
+        {
+            tputs("File deleted\n");
+        }
+        else
+        {
+            switch(errno)
+            {
+                case EACCES:
+                    tputs("Permission denied\n");
+                    break;
+
+                case EBUSY:
+                    tputs("File busy\n");
+                    break;
+
+                default:
+                    tputs("Error deleting file\n");
+            }
+        }
+    }
+}
+
+int getCpuTemperature(double *cpuTemp)
+{
+    FILE *fp;
+    char tempStr[32];
+    int rtn;
+
+    rtn = -1;
+
+    fp = fopen("/sys/class/thermal/thermal_zone0/temp", "r");
+    if(fp == NULL)
+    {
+        tputs("fopen() error\n");
+        return rtn;
+    }
+
+    if(fscanf(fp, "%s", tempStr) == 1)
+    {
+        *cpuTemp = (double)(atoi(tempStr)) / 1000.0;
+        rtn = 0;
+    }
+
+    fclose(fp);
+
+    return rtn;
+}
+
+void cmdShowTemperature(char *ptr)
+{
+    double cpuTemp;
+
+    if(getCpuTemperature(&cpuTemp) == 0)
+    {
+        sprintf(pBuf, "  CPU temperature: %0.1lf degrees\n", cpuTemp);
+        tputs(pBuf);
+    }
+    else
+    {
+        tputs("Error getting CPU temperature\n");
+    }
+}

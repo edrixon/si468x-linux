@@ -1,4 +1,4 @@
 #!/bin/sh
 
-darkice -c ~/dab/darkice/darkice.cfg
+nohup darkice -c ~/dab/darkice/darkice.cfg > /dev/null 2>&1 &
 

@@ -60,7 +60,7 @@ void siGetFuncInfo(void);
 void siGetSysState();
 void siPowerup();
 void siLoadInit();
-void siHostLoad();
+void siHostLoad(uint8_t *patch, uint16_t patchSize);
 void siFlashSetProperty(uint16_t property, uint16_t value);
 void siSetProperty(uint16_t property, uint16_t value);
 void siGetProperty(uint16_t property);

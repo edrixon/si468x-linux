@@ -1,25 +1,19 @@
-OUTFILE=telnetd
-
-SRC=main.c
-INC=../types.h ../dabshmem.h ../dabcmd.h ../shm.h cli.h telnetd.h commands.h
-OBJ=main.o cli.o telnetd.o commands.o
-OBJDAB=../shm.o
-LIB=-lrt
-CFLAGS=-Wall -pthread
-LDFLAGS=-pthread
+DAB=..
 CC=gcc
+CFLAGS=-Wall
+LIB=$(DAB)/shm.o -lrt -lgps
+LDFLAGS=-pthread
+OBJS=main.o cli.o telnetd.o commands.o
+INC=$(DAB)/types.h $(DAB)/dabshmem.h $(DAB)/dabcmd.h $(DAB)/shm.h \
+    cli.h telnetd.h commands.h globals.h
+EXEC=telnetd
 
-$(OUTFILE): $(OBJ)
-	gcc $(LDFLAGS) -o $(OUTFILE) $(OBJ) $(OBJDAB) $(LIB)
+$(EXEC): $(OBJS)
+	$(CC) $(LDFLAGS) -o $(EXEC) $(OBJS) $(LIB)
 
-main.o: $(INC) main.c
-
-cli.o: $(INC) cli.c
-
-telnetd.o: $(INC) telnetd.c
-
-commands.o: $(INC) commands.c
+%.o: %.c $(INC)
+	$(CC) -c -o $@ $< $(CFLAGS)
 
 clean:
-	rm -f $(OBJ)
-	rm -f $(OUTFILE)
+	rm -f $(OBJS)
+	rm -f $(EXEC)

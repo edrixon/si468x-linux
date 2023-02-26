@@ -1,3 +1,9 @@
+//
+// Ed's Si468x Linux driver for DABShield Arduino board
+// Code based on Arduino C++ library
+// Supports DAB functions only
+//
+
 #include <stdio.h>
 #include <sys/time.h>
 #include <time.h>
@@ -20,6 +26,31 @@
 #include "utils.h"
 #include "dab.h"
 #include "globals.h"
+
+void siSplit32(uint8_t *bPtr, uint32_t wrd)
+{
+    int c;
+    uint32_t mask;
+    int sft;
+
+    sft = 0;
+    mask = 0x000000ff;
+
+    for(c = 0; c < 4; c++)
+    {
+        *bPtr = (wrd & mask) >> sft;
+
+        bPtr++;
+        mask = mask << 8;
+        sft = sft + 8;
+    }
+}
+
+void siSplit16(uint8_t *bPtr, uint16_t wrd)
+{
+    *bPtr = (wrd & 0x00ff);
+    *(bPtr + 1) = (wrd & 0xff00) >> 8;
+}
 
 void siWrite(uint32_t len)
 {
@@ -57,9 +88,9 @@ void siCts()
             break;
         }
     }
-    while ((spiBuf[1] & 0x80) == 0x00);
+    while((spiBuf[1] & 0x80) != 0x80);
 
-    if ((spiBuf[1] & 0x40) == 0x40)
+    if((spiBuf[1] & 0x40) == 0x40)
     {
         siResponseN(5);
         command_error = 0x80 | spiBuf[5];
@@ -68,228 +99,219 @@ void siCts()
 
 void siGetPartInfo(void)
 {
-	spiBuf[0] = SI46XX_GET_PART_INFO;
-	spiBuf[1] = 0x00;
-	siWrite(2);
-	siCts();
+    spiBuf[0] = SI46XX_GET_PART_INFO;
+    spiBuf[1] = 0x00;
+    siWrite(2);
+    siCts();
 }
 
 void siGetFuncInfo(void)
 {
-	spiBuf[0] = SI46XX_GET_FUNC_INFO;
-	spiBuf[1] = 0x00;
-	siWrite(2);
-	siCts();
+    spiBuf[0] = SI46XX_GET_FUNC_INFO;
+    spiBuf[1] = 0x00;
+    siWrite(2);
+    siCts();
 }
 
 void siGetSysState()
 {
-        bzero(spiBuf, 32);
-	spiBuf[0] = SI46XX_GET_SYS_STATE;
-	spiBuf[1] = 0x00;
-	siWrite(2);
-	siCts();
+    bzero(spiBuf, 32);
+    spiBuf[0] = SI46XX_GET_SYS_STATE;
+    spiBuf[1] = 0x00;
+    siWrite(2);
+    siCts();
 }
 
 void siPowerup()
 {
-	spiBuf[0] = SI46XX_POWER_UP;
-	spiBuf[1] = 0x00;
-	spiBuf[2] = 0x17;
-	spiBuf[3] = 0x48;
-	spiBuf[4] = 0x00;
-	spiBuf[5] = 0xf8;
-	spiBuf[6] = 0x24;
-	spiBuf[7] = 0x01;
-	spiBuf[8] = 0x1F;
-	spiBuf[9] = 0x10;
-	spiBuf[10] = 0x00;
-	spiBuf[11] = 0x00;
-	spiBuf[12] = 0x00;
-	spiBuf[13] = 0x18;
-	spiBuf[14] = 0x00;
-	spiBuf[15] = 0x00;
+    spiBuf[0] = SI46XX_POWER_UP;
+    spiBuf[1] = 0x00;
+    spiBuf[2] = 0x17;
+    spiBuf[3] = 0x48;
+    spiBuf[4] = 0x00;
+    spiBuf[5] = 0xf8;
+    spiBuf[6] = 0x24;
+    spiBuf[7] = 0x01;
+    spiBuf[8] = 0x1F;
+    spiBuf[9] = 0x10;
+    spiBuf[10] = 0x00;
+    spiBuf[11] = 0x00;
+    spiBuf[12] = 0x00;
+    spiBuf[13] = 0x18;
+    spiBuf[14] = 0x00;
+    spiBuf[15] = 0x00;
 
-	siWrite(16);
-	siCts();
+    siWrite(16);
+    siCts();
 
-	spiBuf[0] = SI46XX_POWER_UP;
-	spiBuf[1] = 0x00;
-	spiBuf[2] = 0x17;
-	spiBuf[3] = 0x48;
-	spiBuf[4] = 0x00;
-	spiBuf[5] = 0xf8;
-	spiBuf[6] = 0x24;
-	spiBuf[7] = 0x01;
-	spiBuf[8] = 0x1F;
-	spiBuf[9] = 0x10;
-	spiBuf[10] = 0x00;
-	spiBuf[11] = 0x00;
-	spiBuf[12] = 0x00;
-	spiBuf[13] = 0x18;
-	spiBuf[14] = 0x00;
-	spiBuf[15] = 0x00;
+    spiBuf[0] = SI46XX_POWER_UP;
+    spiBuf[1] = 0x00;
+    spiBuf[2] = 0x17;
+    spiBuf[3] = 0x48;
+    spiBuf[4] = 0x00;
+    spiBuf[5] = 0xf8;
+    spiBuf[6] = 0x24;
+    spiBuf[7] = 0x01;
+    spiBuf[8] = 0x1F;
+    spiBuf[9] = 0x10;
+    spiBuf[10] = 0x00;
+    spiBuf[11] = 0x00;
+    spiBuf[12] = 0x00;
+    spiBuf[13] = 0x18;
+    spiBuf[14] = 0x00;
+    spiBuf[15] = 0x00;
 
-	siWrite(16);
-	siCts();
+    siWrite(16);
+    siCts();
 }
 
 void siLoadInit()
 {
-	spiBuf[0] = SI46XX_LOAD_INIT;
-	spiBuf[1] = 0x00;
+    spiBuf[0] = SI46XX_LOAD_INIT;
+    spiBuf[1] = 0x00;
 
-	siWrite(2);
-	siCts();
+    siWrite(2);
+    siCts();
 }
 
-void siHostLoad()
+void siHostLoad(uint8_t *patch, uint16_t patchSize)
 {
-	uint16_t index;
-	uint16_t patchsize;
-	uint16_t i;
+    uint16_t bytesLoaded; 
+    uint16_t i;
 
-	patchsize = sizeof(rom_patch_016);
-	index = 0;
+    bytesLoaded = 0;
 
-	while (index < patchsize)
-	{
-		spiBuf[0] = SI46XX_HOST_LOAD;
-		spiBuf[1] = 0x00;
-		spiBuf[2] = 0x00;
-		spiBuf[3] = 0x00;
-		for (i = 4; (i < SPI_BUFF_SIZE) && (index < patchsize); i++)
-		{
-			spiBuf[i] = rom_patch_016[index];
-			index++;
-		}
-		siWrite(i);
-		siCts();
-	}
+    while(bytesLoaded < patchSize)
+    {
+        spiBuf[0] = SI46XX_HOST_LOAD;
+        spiBuf[1] = 0x00;
+        spiBuf[2] = 0x00;
+        spiBuf[3] = 0x00;
+        for(i = 4; (i < SPI_BUFF_SIZE) && (bytesLoaded < patchSize); i++)
+        {
+            spiBuf[i] = *patch;
+
+            patch++;
+            bytesLoaded++;
+        }
+
+        siWrite(i);
+        siCts();
+    }
 }
 
 void siFlashSetProperty(uint16_t property, uint16_t value)
 {
-	spiBuf[0] = SI46XX_FLASH_LOAD;
-	spiBuf[1] = 0x10;
-	spiBuf[2] = 0x0;
-	spiBuf[3] = 0x0;
+    spiBuf[0] = SI46XX_FLASH_LOAD;
+    spiBuf[1] = 0x10;
+    spiBuf[2] = 0x0;
+    spiBuf[3] = 0x0;
 
-	spiBuf[4] = property & 0xFF;		//SPI CLock
-	spiBuf[5] = (property >> 8) & 0xFF;
-	spiBuf[6] = value & 0xFF;
-	spiBuf[7] = (value >> 8) & 0xFF;
+    siSplit16(&spiBuf[4], property);
+    siSplit16(&spiBuf[6], value);
 
-	siWrite(8);
-	siCts();
-
+    siWrite(8);
+    siCts();
 }
 
 void siSetProperty(uint16_t property, uint16_t value)
 {
-	spiBuf[0] = SI46XX_SET_PROPERTY;
-	spiBuf[1] = 0x00;
+    spiBuf[0] = SI46XX_SET_PROPERTY;
+    spiBuf[1] = 0x00;
 
-	spiBuf[2] = property & 0xFF;
-	spiBuf[3] = (property >> 8) & 0xFF;
-	spiBuf[4] = value & 0xFF;
-	spiBuf[5] = (value >> 8) & 0xFF;
+    siSplit16(&spiBuf[2], property);
+    siSplit16(&spiBuf[4], value);
 
-	siWrite(6);
-	siCts();
+    siWrite(6);
+    siCts();
 }
 
 void siGetProperty(uint16_t property)
 {
-	spiBuf[0] = SI46XX_GET_PROPERTY;
-	spiBuf[1] = 0x01;
-        spiBuf[2] = property & 0x00ff;
-        spiBuf[3] = (property >> 8) & 0xff;
+    spiBuf[0] = SI46XX_GET_PROPERTY;
+    spiBuf[1] = 0x01;
+    siSplit16(&spiBuf[2], property);
 
-        siWrite(4);
-        siCts();
+    siWrite(4);
+    siCts();
 }
 
 void siFlashLoad(uint32_t flash_addr)
 {
-	spiBuf[0] = SI46XX_FLASH_LOAD;
-	spiBuf[1] = 0x00;
-	spiBuf[2] = 0x00;
-	spiBuf[3] = 0x00;
+    spiBuf[0] = SI46XX_FLASH_LOAD;
+    spiBuf[1] = 0x00;
+    spiBuf[2] = 0x00;
+    spiBuf[3] = 0x00;
 
-	spiBuf[4] = (flash_addr  & 0xff);
-	spiBuf[5] = ((flash_addr >> 8)  & 0xff);
-	spiBuf[6] = ((flash_addr >> 16)  & 0xff);
-	spiBuf[7] = ((flash_addr >> 24) & 0xff);
+    siSplit32(&spiBuf[4], flash_addr);
 
-	spiBuf[8] = 0x00;
-	spiBuf[9] = 0x00;
-	spiBuf[10] = 0x00;
-	spiBuf[11] = 0x00;
+    spiBuf[8] = 0x00;
+    spiBuf[9] = 0x00;
+    spiBuf[10] = 0x00;
+    spiBuf[11] = 0x00;
 
-	siWrite(12);
-	siCts();
-
+    siWrite(12);
+    siCts();
 }
 
 void siBoot()
 {
-	spiBuf[0] = SI46XX_BOOT;
-	spiBuf[1] = 0x00;
+    spiBuf[0] = SI46XX_BOOT;
+    spiBuf[1] = 0x00;
 
-	siWrite(2);
-	siCts();
+    siWrite(2);
+    siCts();
 }
 
 void siSetFreqList()
 {
-	uint8_t i;
-	uint32_t freq;
+    uint8_t i;
+    uint32_t freq;
+    int c;
 
-	spiBuf[0] = SI46XX_DAB_SET_FREQ_LIST;
-	spiBuf[1] = DAB_FREQS;
-	spiBuf[2] = 0x00;
-	spiBuf[3] = 0x00;
+    spiBuf[0] = SI46XX_DAB_SET_FREQ_LIST;
+    spiBuf[1] = numDabMhz;
+    spiBuf[2] = 0x00;
+    spiBuf[3] = 0x00;
 
-	for (i = 0; i < DAB_FREQS; i++)
-	{
-		freq = dab_freq[i];
+    for(i = 0; i < numDabMhz; i++)
+    {
+        freq = dabMhz[i];
 
-		spiBuf[4 + (i * 4)] = (freq  & 0xff);
-		spiBuf[5 + (i * 4)] = ((freq >> 8)  & 0xff);
-		spiBuf[6 + (i * 4)] = ((freq >> 16)  & 0xff);
-		spiBuf[7 + (i * 4)] = ((freq >> 24) & 0xff);
-	}
-	siWrite(4 + (i * 4));
-	siCts();
+        c = (i * 4) + 4;
+        siSplit32(&spiBuf[c], freq);
+    }
+
+    siWrite(4 + (i * 4));
+    siCts();
 }
 
 void siDabTuneFreq(uint8_t freq_index)
 {
-	uint32_t timeout;
+    uint32_t timeout;
 
-	spiBuf[0] = SI46XX_DAB_TUNE_FREQ;
-	spiBuf[1] = 0x00;
-	spiBuf[2] = freq_index;
-	spiBuf[3] = 0x00;
-	spiBuf[4] = 0x00;
-	spiBuf[5] = 0x00;
-	siWrite(6);
-	siCts();
+    spiBuf[0] = SI46XX_DAB_TUNE_FREQ;
+    spiBuf[1] = 0x00;
+    spiBuf[2] = freq_index;
+    spiBuf[3] = 0x00;
+    spiBuf[4] = 0x00;
+    spiBuf[5] = 0x00;
+    siWrite(6);
+    siCts();
 
-	timeout = 1000;
-	do
-	{
-		milliSleep(4);
-		siResponse();
-		timeout--;
-		if(timeout == 0)
-		{
-			command_error |= 0x80;
-			break;
-		}
-	}
-	while ((spiBuf[1] & 0x01) == 0); //STCINT
+    timeout = 1000;
+    do
+    {
+        milliSleep(4);
+        siResponse();
+        timeout--;
+        if(timeout == 0)
+        {
+            command_error |= 0x80;
+            break;
+        }
+    }
+    while((spiBuf[1] & 0x01) != 0x01); //STCINT
 }
 
 void siStopDigitalService(uint32_t serviceID, uint32_t compID)
@@ -298,160 +320,122 @@ void siStopDigitalService(uint32_t serviceID, uint32_t compID)
     spiBuf[1] = 0x00; // Audio service, 1 is data service
     spiBuf[2] = 0x00;
     spiBuf[3] = 0x00;
-    spiBuf[4] = serviceID & 0xff;
-    spiBuf[5] = (serviceID >> 8) & 0xff;
-    spiBuf[6] = (serviceID >> 16) & 0xff;
-    spiBuf[7] = (serviceID >> 24) & 0xff;
-    spiBuf[8] = compID & 0xff;
-    spiBuf[9] = (compID >> 8) & 0xff;
-    spiBuf[10] = (compID >> 16) & 0xff;
-    spiBuf[11] = (compID >> 24) & 0xff;
+    siSplit32(&spiBuf[4], serviceID);
+    siSplit32(&spiBuf[8], compID);
     siWrite(12);
     siCts();
 }
 void siStartDigitalService(uint32_t serviceID, uint32_t compID)
 {
-    int c;
-
-    dabShMem -> currentService.ServiceID = serviceID;
-    dabShMem -> currentService.CompID = compID;
-
-    c = 0;
-    while(c < dabShMem -> numberofservices &&
-                          (serviceID != dabShMem -> service[c].ServiceID ||
-                                      compID != dabShMem -> service[c].CompID))
-    {
-        c++;
-    }
-
-    if(c == dabShMem -> numberofservices)
-    {
-        dabShMem -> currentService.Label[0] = '\0';
-    }
-    else
-    {
-        strcpy(dabShMem -> currentService.Label, dabShMem -> service[c].Label);
-    }
-
     spiBuf[0] = SI46XX_DAB_START_DIGITAL_SERVICE;
     spiBuf[1] = 0x00;
     spiBuf[2] = 0x00;
     spiBuf[3] = 0x00;
-    spiBuf[4] = serviceID & 0xff;
-    spiBuf[5] = (serviceID >> 8) & 0xff;
-    spiBuf[6] = (serviceID >> 16) & 0xff;
-    spiBuf[7] = (serviceID >> 24) & 0xff;
-    spiBuf[8] = compID & 0xff;
-    spiBuf[9] = (compID >> 8) & 0xff;
-    spiBuf[10] = (compID >> 16) & 0xff;
-    spiBuf[11] = (compID >> 24) & 0xff;
+    siSplit32(&spiBuf[4], serviceID);
+    siSplit32(&spiBuf[8], compID);
     siWrite(12);
     siCts();
 }
 
 void siDabGetEnsembleInfo(void)
 {
-	spiBuf[0] = SI46XX_DAB_GET_ENSEMBLE_INFO;
-	spiBuf[1] = 0x00;
-	siWrite(2);
-	siCts();
+    spiBuf[0] = SI46XX_DAB_GET_ENSEMBLE_INFO;
+    spiBuf[1] = 0x00;
+    siWrite(2);
+    siCts();
 }
 
 void siDabGetServiceInfo(uint32_t serviceID)
 {
-	spiBuf[0] = SI46XX_DAB_GET_SERVICE_INFO;
-	spiBuf[1] = 0x00;
-	spiBuf[2] = 0x00;
-	spiBuf[3] = 0x00;
-	spiBuf[4] = serviceID & 0xff;
-	spiBuf[5] = (serviceID >> 8) & 0xff;
-	spiBuf[6] = (serviceID >> 16) & 0xff;
-	spiBuf[7] = (serviceID >> 24) & 0xff;
-	siWrite(8);
-	siCts();
+    spiBuf[0] = SI46XX_DAB_GET_SERVICE_INFO;
+    spiBuf[1] = 0x00;
+    spiBuf[2] = 0x00;
+    spiBuf[3] = 0x00;
+    siSplit32(&spiBuf[4], serviceID);
+    siWrite(8);
+    siCts();
 }
 
 void siDabGetSubChannelInfo(uint32_t serviceID, uint32_t compID)
 {
-	spiBuf[0] = SI46XX_DAB_GET_SUBCHAN_INFO;
-	spiBuf[1] = 0x00;
-	spiBuf[2] = 0x00;
-	spiBuf[3] = 0x00;
-	spiBuf[4] = serviceID & 0xff;
-	spiBuf[5] = (serviceID >> 8) & 0xff;
-	spiBuf[6] = (serviceID >> 16) & 0xff;
-	spiBuf[7] = (serviceID >> 24) & 0xff;
-	spiBuf[8] = compID & 0xff;
-	spiBuf[9] = (compID >> 8) & 0xff;
-	spiBuf[10] = (compID >> 16) & 0xff;
-	spiBuf[11] = (compID >> 24) & 0xff;
-	siWrite(12);
-	siCts();
+    spiBuf[0] = SI46XX_DAB_GET_SUBCHAN_INFO;
+    spiBuf[1] = 0x00;
+    spiBuf[2] = 0x00;
+    spiBuf[3] = 0x00;
+    siSplit32(&spiBuf[4], serviceID);
+    siSplit32(&spiBuf[8], compID);
+
+    siWrite(12);
+    siCts();
 }
 
 void siDabGetAudioInfo(void)
 {
-	spiBuf[0] = SI46XX_DAB_GET_AUDIO_INFO;
-	spiBuf[1] = 0x00;
-	siWrite(2);
-	siCts();
+    spiBuf[0] = SI46XX_DAB_GET_AUDIO_INFO;
+    spiBuf[1] = 0x00;
+    siWrite(2);
+    siCts();
 }
 
 void siDabDigRadStatus(void)
 {
-	spiBuf[0] = SI46XX_DAB_DIGRAD_STATUS;
-	spiBuf[1] = 0x09; //Clear Interrupts: DIGRAD_ACK | STC_ACK
-	siWrite(2);
-	siCts();
+    spiBuf[0] = SI46XX_DAB_DIGRAD_STATUS;
+    spiBuf[1] = 0x09; //Clear Interrupts: DIGRAD_ACK | STC_ACK
+    siWrite(2);
+    siCts();
 }
 
 void siGetDigitalServiceData(void)
 {
-	spiBuf[0] = SI46XX_GET_DIGITAL_SERVICE_DATA;
-	spiBuf[1] = 0x01;
-	siWrite(2);
-	siCts();
+    spiBuf[0] = SI46XX_GET_DIGITAL_SERVICE_DATA;
+    spiBuf[1] = 0x01;
+    siWrite(2);
+    siCts();
 }
 
 void siGetRssi(void)
 {
-	spiBuf[0] = SI46XX_DAB_GET_RSSI;
-	spiBuf[1] = 0x00;
-	siWrite(2);
-	siCts();
+    spiBuf[0] = SI46XX_DAB_GET_RSSI;
+    spiBuf[1] = 0x00;
+
+    siWrite(2);
+    siCts();
 }
 
 void siGetTime(void)
 {
-	spiBuf[0] = SI46XX_GET_TIME;
-	spiBuf[1] = 0x00;
-	siWrite(2);
+    spiBuf[0] = SI46XX_GET_TIME;
+    spiBuf[1] = 0x00;
 
-	siCts();
+    siWrite(2);
+    siCts();
 }
 
 void siDabGetEventStatus(void)
 {
-	spiBuf[0] = SI46XX_DAB_GET_EVENT_STATUS;
-	spiBuf[1] = 0x00;
-	siWrite(2);
-	siCts();
+    spiBuf[0] = SI46XX_DAB_GET_EVENT_STATUS;
+    spiBuf[1] = 0x00;
+
+    siWrite(2);
+    siCts();
 }
 
 void siDabGetAcfStatus(void)
 {
-	spiBuf[0] = SI46XX_DAB_GET_ACF_STATUS;
-	spiBuf[1] = 0x00;
-	siWrite(2);
-	siCts();
+    spiBuf[0] = SI46XX_DAB_GET_ACF_STATUS;
+    spiBuf[1] = 0x00;
+
+    siWrite(2);
+    siCts();
 }
 
 void siGetDigitalServiceList(void)
 {
-	spiBuf[0] = SI46XX_DAB_GET_DIGITAL_SERVICE_LIST;
-	spiBuf[1] = 0x00;
-	siWrite(2);
-	siCts();
+    spiBuf[0] = SI46XX_DAB_GET_DIGITAL_SERVICE_LIST;
+    spiBuf[1] = 0x00;
+
+    siWrite(2);
+    siCts();
 }
 
 void siInitDab()
@@ -479,7 +463,7 @@ void siReset()
 {
     siPowerup();
     siLoadInit();
-    siHostLoad();
+    siHostLoad(rom_patch_016, sizeof(rom_patch_016));
     siLoadInit();
     siFlashSetProperty(1, 10000);
 }

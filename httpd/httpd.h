@@ -5,6 +5,7 @@
 void httpdIncUsers();
 void httpdDecUsers();
 void tputs(char *str);
+void tputsCRLF(int expandCRLF, char *str);
 int tgets(char *str);
 void getAsciiTime(char *buf);
 void telnetdSigalrm(int signum);
@@ -19,6 +20,9 @@ void httpd();
 
 #define WWW_ROOT               "/root/dab/www"
 
+#define MAX_AUDIO_MODES 4
+#define MAX_SERVICE_MODES 9
+
 typedef struct
 {
     char *name;
@@ -29,6 +33,7 @@ typedef struct
 {
     char *fileExtension;
     char *mimeType;
+    int needLength;
 } contentHeaderType;
 
 #endif

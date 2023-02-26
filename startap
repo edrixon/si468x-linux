@@ -1,0 +1,4 @@
+#!/bin/sh
+
+systemctl start dnsmasq
+systemctl start hostapd

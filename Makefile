@@ -1,30 +1,19 @@
-OUTFILE=dab
-
-SRC=main.c shm.c si468x.c utils.c dab.c dablogger.c
-INC=types.h dabshmem.h si468x.h si468xROM.h dabcmd.h shm.h utils.h dab.h dablogger.h
-OBJ=main.o shm.o si468x.o utils.o dab.o dablogger.o
-LIB=-lpigpio -lrt -lm
-CFLAGS=-Wall -pthread
-LDFLAGS=-pthread
 CC=gcc
+CFLAGS=-Wall
+LIB=-lpigpio -lrt -lm -lgps
+LDFLAGS=-pthread
+OBJS=dab.o dablogger.o main.o shm.o si468x.o utils.o timers.o buzzer.o
+INC=dab.h dabcmd.h dablogger.h dabshmem.h globals.h shm.h \
+    si468x.h si468xROM.h types.h utils.h timers.h buzzer.h
+EXEC=dab
 
-$(OUTFILE): $(OBJ)
-	gcc $(LDFLAGS) -o $(OUTFILE) $(OBJ) $(LIB)
+$(EXEC): $(OBJS)
+	$(CC) $(LDFLAGS) -o $(EXEC) $(OBJS) $(LIB)
 
-main.o: $(INC) main.c
-
-shm.o: $(INC) shm.c
-
-si468x.o: $(INC) si468x.c
-
-utils.o: $(INC) utils.c
-
-dab.o: $(INC) dab.c
-
-dablogger.o: $(INC) dablogger.c
-
-cli.o: $(INC) cli.c
+%.o: %.c $(INC)
+	$(CC) -c -o $@ $< $(CFLAGS)
 
 clean:
-	rm -f $(OBJ)
-	rm -f $(OUTFILE)
+	rm -f $(OBJS)
+	rm -f $(EXEC)
+	rm dabrx.config

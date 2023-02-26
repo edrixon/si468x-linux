@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <strings.h>
 #include <string.h>
@@ -21,37 +22,38 @@
 #include "utils.h"
 #include "dablogger.h"
 #include "dab.h"
+#include "timers.h"
 
 #include "globals.h"
 
 void dabSetValidRssiTime(int newVal)
 {
     siSetProperty(SI46XX_DAB_VALID_RSSI_TIME, newVal);
-    dabShMem -> validSignal.rssiTime = newVal;
+    dabShMem -> sysConfig.validSignal.rssiTime = newVal;
 }
 
 void dabSetValidRssiThreshold(int newVal)
 {
     siSetProperty(SI46XX_DAB_VALID_RSSI_THRESHOLD, newVal);
-    dabShMem -> validSignal.rssiThreshold = newVal;
+    dabShMem -> sysConfig.validSignal.rssiThreshold = newVal;
 }
 
 void dabSetValidAcqTime(int newVal)
 {
     siSetProperty(SI46XX_DAB_VALID_ACQ_TIME, newVal);
-    dabShMem -> validSignal.acqTime = newVal;
+    dabShMem -> sysConfig.validSignal.acqTime = newVal;
 }
 
 void dabSetValidSyncTime(int newVal)
 {
     siSetProperty(SI46XX_DAB_VALID_SYNC_TIME, newVal);
-    dabShMem -> validSignal.syncTime = newVal;
+    dabShMem -> sysConfig.validSignal.syncTime = newVal;
 }
 
 void dabSetValidDetectTime(int newVal)
 {
     siSetProperty(SI46XX_DAB_VALID_DETECT_TIME, newVal);
-    dabShMem -> validSignal.detectTime = newVal;
+    dabShMem -> sysConfig.validSignal.detectTime = newVal;
 }
 
 int dabGetValidRssiThreshold()
@@ -66,24 +68,13 @@ boolean dabServiceValid(void)
 {
     dabFreqType *dFreq;
 
-    siDabDigRadStatus();
-    siResponseN(23);
+    dabGetDigRadioStatus();
 
-    dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
-
-    dFreq -> sigQuality.rssi = spiBuf[7];
-    dFreq -> sigQuality.snr = spiBuf[8];
-    dFreq -> sigQuality.ficQuality = spiBuf[9];
-    dFreq -> sigQuality.cnr = spiBuf[10];
-    dFreq -> sigQuality.fibErrorCount = spiBytesTo16(&spiBuf[11]);
-
+    dFreq = currentDabFreq();
     if((spiBuf[6] & 0x05) == 0x05)
     {
         dFreq -> serviceValid = TRUE;
-
-        dabShMem -> dabServiceValid = TRUE;
-        dabShMem -> cuCount = spiBytesTo16(&spiBuf[21]);
-
+        dFreq -> cuCount = spiBytesTo16(&spiBuf[21]);
     }
     else
     {
@@ -93,10 +84,10 @@ boolean dabServiceValid(void)
                                        sizeof(DABService) * DAB_MAX_SERVICES);
 
         dFreq -> serviceValid = FALSE;
-        dabShMem -> dabServiceValid = FALSE;
+        dFreq -> cuCount = 0;
     }
 
-    return dabShMem -> dabServiceValid;
+    return dFreq -> serviceValid;
 }
 
 void dabWaitServiceList(void)
@@ -129,6 +120,9 @@ void dabParseServiceList(void)
 	uint16_t numberofcomponents;
 	uint16_t listsize;
 	uint16_t version;
+        int mask;
+        int c;
+        char *cPtr;
 
 	listsize = spiBytesTo16(&spiBuf[5]);
 	version = spiBytesTo16(&spiBuf[7]);
@@ -178,28 +172,80 @@ void dabParseServiceList(void)
         siResponseN(26);
 
         dabShMem -> service[i].programmeType = spiBuf[5];
+        mask = (spiBuf[26] << 8) | spiBuf[25];
+        cPtr = dabShMem -> service[i].shortLabel;
+        for(c = 0; c < 16; c++)
+        {
+            if((mask & 0x8000) == 0x8000)
+            {
+                *cPtr = dabShMem -> service[i].Label[c];
+                cPtr++;
+            }
+
+            mask = mask << 1;
+        }
+        *cPtr = '\0';
     }
 }
 
 void dabGetDigRadioStatus()
 {
     dabFreqType *dFreq;
+    sigQualityType *sq;
 
-    dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
+    dFreq = currentDabFreq();
+    sq = &(dFreq -> sigQuality);
 
     siDabDigRadStatus();
     siResponseN(23);
 
-    dFreq -> sigQuality.rssi = spiBuf[7];
-    dFreq -> sigQuality.snr = spiBuf[8];
-    dFreq -> sigQuality.ficQuality = spiBuf[9];
-    dFreq -> sigQuality.cnr = spiBuf[10];
-    dFreq -> sigQuality.fibErrorCount = spiBytesTo16(&spiBuf[11]);
-    dabShMem -> cuCount = spiBytesTo16(&spiBuf[21]);
+    sq -> rssi = spiBuf[7];
+    sq -> snr = spiBuf[8];
+    sq -> ficQuality = spiBuf[9];
+    sq -> cnr = spiBuf[10];
+  
+    dFreq -> cuCount = spiBytesTo16(&spiBuf[21]);
+}
+
+void dabScheduledGetDigRadioStatus()
+{
+    dabFreqType *dFreq;
+    sigQualityType *sq;
+    unsigned short int fibErrorCount;
+    time_t ticksNow;
+    time_t diffPeriod;
+
+    dFreq = currentDabFreq();
+    sq = &(dFreq -> sigQuality);
+
+    time(&ticksNow);
+
+    // how many seconds since last time
+    diffPeriod = ticksNow - sq -> ticks;
+    sq -> ticks = ticksNow;
+
+    dabGetDigRadioStatus();
+
+    // get new FIB error count
+    fibErrorCount = spiBytesTo16(&spiBuf[11]);
+
+    // Number of errors since last time
+    if(fibErrorCount >= sq -> fibErrorCount)
+    {
+        sq -> fibErrorDiff = fibErrorCount - sq -> fibErrorCount;
+    }
+    else
+    {
+        sq -> fibErrorDiff = fibErrorCount;
+    }
+
+    // work out errors per second
+    sq -> fibErrorRate = (double)(sq -> fibErrorDiff) / diffPeriod;
+
+    // save current error count
+    sq -> fibErrorCount = fibErrorCount;
 
     dabGetEnsembleInfo();
-
-//    dabGetRssi();
 }
 
 void dabGetAcfStatus()
@@ -209,7 +255,7 @@ void dabGetAcfStatus()
 
     dabShMem -> audioLevelRaw = spiBytesTo16(&spiBuf[7]);
     dabShMem -> audioLevel =
-                          20 * log((double)(dabShMem -> audioLevelRaw) / 16383.0);
+                       20 * log((double)(dabShMem -> audioLevelRaw) / 16383.0);
 }
 
 void dabGetEnsembleName(char *ensemble)
@@ -239,7 +285,7 @@ int dabGetEnsembleInfo(void)
     dabFreqType *dFreq;
     int rtn;
 
-    dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
+    dFreq = currentDabFreq();
 
     dabGetEnsembleName(dFreq -> ensemble);
 
@@ -267,7 +313,7 @@ void dabShowEnsemble()
     int c;
     dabFreqType *dFreq;
 
-    dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
+    dFreq = currentDabFreq();
 
     printf("Ensemble: %s\n", dFreq -> ensemble);
     printf("Number of services: %d\n", dabShMem -> numberofservices);
@@ -288,9 +334,9 @@ void dabGetFuncInfo()
     siGetFuncInfo();
     siResponseN(12);
 
-    dabShMem -> funcInfo.major = spiBuf[5];
-    dabShMem -> funcInfo.minor = spiBuf[6];
-    dabShMem -> funcInfo.build = spiBuf[7];
+    dabShMem -> sysInfo.funcInfo.major = spiBuf[5];
+    dabShMem -> sysInfo.funcInfo.minor = spiBuf[6];
+    dabShMem -> sysInfo.funcInfo.build = spiBuf[7];
 }
 
 void dabGetPartInfo()
@@ -315,7 +361,7 @@ void dabGetRssi()
 {
     dabFreqType *dFreq;
 
-    dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
+    dFreq = currentDabFreq();
 
     siGetRssi();
     siResponseN(6);
@@ -347,8 +393,6 @@ void dabGetSubChannelInfo(uint32_t serviceID, uint32_t compID,
     siDabGetSubChannelInfo(serviceID, compID);
     siResponseN(12);
 
-    cInfo -> serviceID = serviceID;
-    cInfo -> compID = compID;
     cInfo -> serviceMode = spiBuf[5];
     cInfo -> protectionInfo = spiBuf[6];
     cInfo -> bitRate = spiBytesTo16(&spiBuf[7]);
@@ -358,8 +402,6 @@ void dabGetSubChannelInfo(uint32_t serviceID, uint32_t compID,
 
 void dabShowSubChannelInfo(channelInfoType *cInfo)
 {
-    printf("  Service ID: %08x\n", cInfo -> serviceID);
-    printf("  Component ID: %08x\n", cInfo -> compID);
     printf("  Service mode: %d\n", cInfo -> serviceMode);
     printf("  Protection info: %d\n", cInfo -> protectionInfo);
     printf("  Bit rate: %d\n", cInfo -> bitRate);
@@ -369,9 +411,32 @@ void dabShowSubChannelInfo(channelInfoType *cInfo)
 
 void dabStartDigitalService(uint32_t serviceID, uint32_t compID)
 {
+    int c;
+
     siStartDigitalService(serviceID, compID);
+
+    bzero(dabShMem -> serviceData, DAB_MAX_SERVICEDATA_LEN);
+
+    dabShMem -> currentService.ServiceID = serviceID;
+    dabShMem -> currentService.CompID = compID;
+
+    c = 0;
+    while(c < dabShMem -> numberofservices &&
+                          (serviceID != dabShMem -> service[c].ServiceID ||
+                                      compID != dabShMem -> service[c].CompID))
+    {
+        c++;
+    }
+
+    if(c < dabShMem -> numberofservices)
+    {
+        strcpy(dabShMem -> currentService.Label, dabShMem -> service[c].Label);
+    }
+
     sleep(1); 
+
     dabGetAudioInfo();
+    dabGetSubChannelInfo(serviceID, compID, &(dabShMem -> channelInfo));
 }
 
 
@@ -384,42 +449,9 @@ void dabStopCurrentDigitalService()
 
         bzero(&(dabShMem -> currentService), sizeof(DABService));
         bzero(&(dabShMem -> audioInfo), sizeof(audioInfoType));
+        bzero(&(dabShMem -> channelInfo), sizeof(channelInfoType));
         bzero(&(dabShMem -> time), sizeof(struct tm));
     }
-}
-
-void dabSaveLastService()
-{
-    int fd;
-
-    fd = open(DAB_LAST_SERVICE, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    write(fd, &(dabShMem -> currentService), sizeof(DABService));
-    close(fd);
-}
-
-void dabGetLastService(DABService *lastService)
-{
-    int fd;
-
-    fd = open(DAB_LAST_SERVICE, O_RDONLY);
-    if(fd < 0)
-    {
-        printf("Loading defaults\n");
-        fd = open(DAB_LAST_SERVICE, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-        bzero(lastService, sizeof(DABService));
-        lastService -> ServiceID = DAB_DEFAULT_SERVICE_ID;
-        lastService -> CompID = DAB_DEFAULT_COMP_ID;
-        lastService -> Freq = DAB_DEFAULT_FREQ;
-        write(fd, lastService, sizeof(DABService));
-    }
-    else
-    {
-        printf("Using settings from last time\n");
-        read(fd, lastService, sizeof(DABService));
-    }
-
-    printf("Service ID: 0x%08x  Component ID: 0x%08x\n", lastService -> ServiceID, lastService -> CompID);
-    close(fd);
 }
 
 void dabInterrupt(int gpio, int level, unsigned int ticks)
@@ -429,9 +461,7 @@ void dabInterrupt(int gpio, int level, unsigned int ticks)
     uint16_t byteCount;
     uint16_t compID;
     uint16_t servID;
-    uint8_t buffCount;
     uint8_t header1;
-    uint8_t header2;
     uint8_t *dlsData;
 
     if(dabLoggerRunning() == TRUE)
@@ -455,8 +485,6 @@ void dabInterrupt(int gpio, int level, unsigned int ticks)
         compID = spiBytesTo32(&spiBuf[13]);
         byteCount = spiBytesTo16(&spiBuf[19]);
 
-        buffCount = spiBuf[6];
-
         if(byteCount < (SPI_BUFF_SIZE - 24))
         {
             siResponseN(byteCount + 24);
@@ -473,7 +501,6 @@ void dabInterrupt(int gpio, int level, unsigned int ticks)
             dabShMem -> serviceDataMs = timeMillis();
 
             header1 = spiBuf[25];
-            header2 = spiBuf[26];
 
             if((header1 & 0x10) == 0x10)
             {
@@ -522,9 +549,9 @@ void dabBegin()
 
     printf("  Active image %d, version %d.%d.%d\n",
                           dabShMem -> sysInfo.activeImage,
-                          dabShMem -> funcInfo.major,
-                          dabShMem -> funcInfo.minor,
-                          dabShMem -> funcInfo.build);
+                          dabShMem -> sysInfo.funcInfo.major,
+                          dabShMem -> sysInfo.funcInfo.minor,
+                          dabShMem -> sysInfo.funcInfo.build);
 }
 
 void dabResetRadio()
@@ -574,8 +601,8 @@ void dabCommand()
                break;
 
             case DABCMD_SAVE:
-               printf("  **Save current service\n");
-               dabSaveLastService();
+               printf("  **Save system configuration\n");
+               dabSaveSysConfig();
                break;
 
             case DABCMD_RESET:
@@ -606,6 +633,12 @@ void dabCommand()
             case DABCMD_SETDETECTTIME:
                printf("  **Set valid detect time\n");
                dabSetValidDetectTime(dabShMem -> dabCmd.params.detectTime);
+               break;
+
+            case DABCMD_LOGGERMODE:
+               printf("  **Set dabLogger run mode\n");
+               dabShMem -> dabResp.runMode =
+                        dabLoggerSetRunMode(dabShMem -> dabCmd.params.runMode);
                break;
 
             case DABCMD_EXIT:
@@ -654,43 +687,20 @@ void dabShowTime()
     }
 }
 
-void dabHandleTimers()
-{
-    int c;
-
-    for(c = 0; c < DAB_MAXTIMERS; c++)
-    {
-        if(dabTimers[c].enabled == TRUE)
-        {
-            if(dabTimers[c].runAlways == TRUE ||
-              (dabTimers[c].runAlways == FALSE  && dabLoggerRunning() == FALSE))
-            {
-                if(dabTimers[c].count)
-                {
-                    dabTimers[c].count--;
-                    if(dabTimers[c].count == 0)
-                    {
-                        dabTimers[c].count = dabTimers[c].reload;
-                        dabTimers[c].handlerFn();
-                    }
-                }
-            }
-        }
-    }
-}
-
 void dabShowSignal()
 { 
     dabFreqType *dFreq;
 
-    dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
+    dFreq = currentDabFreq();
 
-    printf("  RSSI: %d dBuV  SNR: %d dB  CNR: %d dB  FIC Quality: %d %%  FIB errors: %d\n",
+    printf("  RSSI: %d dBuV  SNR: %d dB  CNR: %d dB  FIC Quality: %d %%\n",
                                       dFreq -> sigQuality.rssi,
                                       dFreq -> sigQuality.snr,
                                       dFreq -> sigQuality.cnr,
-                                      dFreq -> sigQuality.ficQuality,
-                                      dFreq -> sigQuality.fibErrorCount);
+                                      dFreq -> sigQuality.ficQuality);
+    printf("  FIB errors: %d (%0.2f per second)\n",
+                                      dFreq -> sigQuality.fibErrorCount,
+                                      dFreq -> sigQuality.fibErrorRate);
 }
 
 void dabShowServiceSummary()
@@ -698,7 +708,7 @@ void dabShowServiceSummary()
     dabFreqType *dFreq;
     char block[6];
 
-    dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
+    dFreq = currentDabFreq();
 
     freqIdToBlock(dabShMem -> currentService.Freq, block);
     printf("  Frequency: %s, %3.3lf MHz  Service: %s, %s\n", block,
@@ -709,7 +719,7 @@ void dabShowState()
 {
     dabFreqType *dFreq;
 
-    dFreq = &(dabShMem -> dabFreq[dabShMem -> currentService.Freq]);
+    dFreq = currentDabFreq();
 
     printf("  Ensemble: %s\n", dFreq -> ensemble);
     printf("  Frequency: %3.3lf MHz\n", currentFreq());
@@ -722,7 +732,7 @@ void dabShowState()
                  dFreq -> sigQuality.snr, dFreq -> sigQuality.cnr);
     printf("  FIC quality: %d %%\n", dFreq -> sigQuality.ficQuality);
     printf("  FIB error count: %d\n", dFreq -> sigQuality.fibErrorCount);  
-    printf("  CU count: %d\n", dabShMem -> cuCount);
+    printf("  CU count: %d\n", dFreq -> cuCount);
 
     printf("  Bit rate: %d\n", dabShMem -> audioInfo.bitRate);
     printf("  Sample rate: %d\n", dabShMem -> audioInfo.sampleRate);
@@ -747,12 +757,13 @@ void dabTuneFreq(DABService *service)
 void dabTune(DABService *service)
 {
     dabGetEnsembleInfo();
-//    dabGetRssi();
     dabStartDigitalService(service -> ServiceID, service -> CompID);
     dabGetDigRadioStatus();
 
     dabShowServiceSummary();
 }
+
+#ifdef __INCLUDE_DABGETBER
 
 void dabGetBer()
 {
@@ -782,17 +793,103 @@ void dabGetBer()
     siSetProperty(SI46XX_DAB_ACF_CMFTNOISE_BER_LIMIT, propBerLimit);
 }
 
+#endif
+
 void dabSigint(int signum)
 {
     printf("Exiting on SIGINT...\n");
+
+    dabSaveSysConfig();
+
     dabShMem -> engineVersion = 0;
     dabShMem -> engineState = DAB_ENGINE_NOTREADY;
     exit(0);
 }
 
+void dabSaveSysConfig()
+{
+    int fd;
+    DABService *serviceToSave;
+
+    serviceToSave = &(dabShMem -> currentService);
+    if(dabLoggerRunning() == TRUE)
+    {
+        if(dabGetLoggerMode() == LOGGER_SCAN)
+        {
+            serviceToSave = &(dabLogger.monitorService); 
+        } 
+    }
+
+    bcopy(serviceToSave, &(dabShMem -> sysConfig.lastService),
+                                                           sizeof(DABService));
+
+    fd = open(DAB_SYSCONFIG, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+    write(fd, &(dabShMem -> sysConfig), sizeof(sysConfigType));
+    close(fd);
+
+    chmod(DAB_SYSCONFIG, 0666);
+}
+
+sysConfigType *dabGetSysConfig()
+{
+    int fd;
+    sysConfigType *sConfig;
+
+    sConfig = &(dabShMem -> sysConfig);
+
+    fd = open(DAB_SYSCONFIG, O_RDONLY);
+    if(fd < 0)
+    {
+        printf("Loading default configuration\n");
+
+        bzero(sConfig, sizeof(sysConfigType));
+
+        sConfig -> lastService.ServiceID = DAB_DEFAULT_SERVICE_ID;
+        sConfig -> lastService.CompID = DAB_DEFAULT_COMP_ID;
+        sConfig -> lastService.Freq = DAB_DEFAULT_FREQ;
+
+        sConfig -> validSignal.rssiThreshold = DAB_VALID_RSSI_THRESHOLD;
+        sConfig -> validSignal.rssiTime = DAB_VALID_RSSI_TIME;
+        sConfig -> validSignal.acqTime = DAB_VALID_ACQ_TIME;
+        sConfig -> validSignal.syncTime = DAB_VALID_SYNC_TIME;
+        sConfig -> validSignal.detectTime = DAB_VALID_DETECT_TIME;
+    }
+    else
+    {
+        printf("Loading system configuration file\n");
+        read(fd, sConfig, sizeof(sysConfigType));
+        close(fd);
+    }
+
+    printf("  Frequency: %lf MHz\n", freqIdToMHz(sConfig -> lastService.Freq));
+    printf("  Service ID: 0x%08x\n", sConfig -> lastService.ServiceID);
+    printf("  Component ID: 0x%08x\n", sConfig -> lastService.CompID);
+
+    return sConfig;
+}
+
+void dabGpsLockLed()
+{
+    gpsInfoType *gpsInfo;
+
+    gpsInfo = &(dabShMem -> gpsInfo);
+
+    if(isfinite(gpsInfo -> latitude) &&
+       isfinite(gpsInfo -> longitude) &&
+       gpsInfo -> fix != 0)
+    {
+        gpioWrite(DAB_LED2_PIN, 1);
+    }
+    else
+    {
+        gpioWrite(DAB_LED2_PIN, 0);
+    }
+}
+
 void dabMain()
 {
-    DABService lastService;
+    sysConfigType *sConfig; 
+    DABService *lastService;
     struct sigaction sigintAction;
 
     sigintAction.sa_handler = dabSigint;
@@ -800,21 +897,22 @@ void dabMain()
     sigintAction.sa_flags = 0;
     sigaction(SIGINT, &sigintAction, NULL);
 
-    dabGetLastService(&lastService);
+    sConfig = dabGetSysConfig();
 
     dabBegin();
 
-    siSetProperty(SI46XX_DAB_VALID_RSSI_TIME, DAB_VALID_RSSI_TIME);
-    dabSetValidRssiThreshold(DAB_VALID_RSSI_THRESHOLD);
-    dabSetValidRssiTime(DAB_VALID_RSSI_TIME);
-    dabSetValidAcqTime(DAB_VALID_ACQ_TIME);
-    dabSetValidSyncTime(DAB_VALID_SYNC_TIME);
-    dabSetValidDetectTime(DAB_VALID_DETECT_TIME);
+    dabSetValidRssiThreshold(sConfig -> validSignal.rssiThreshold);
+    dabSetValidRssiTime(sConfig -> validSignal.rssiTime);
+    dabSetValidAcqTime(sConfig -> validSignal.acqTime);
+    dabSetValidSyncTime(sConfig -> validSignal.syncTime);
+    dabSetValidDetectTime(sConfig -> validSignal.detectTime);
 
-    dabTuneFreq(&lastService);
+    lastService = &(sConfig -> lastService);
+
+    dabTuneFreq(lastService);
     if(dabServiceValid() == TRUE)
     {
-        dabTune(&lastService);
+        dabTune(lastService);
     }
 
     dabInitLogger();
@@ -830,6 +928,7 @@ void dabMain()
 
         if(dabDone == FALSE)
         {
+            dabGpsLockLed();
             dabControlLogger();
             dabHandleTimers();
             milliSleep(DAB_TICKTIME);

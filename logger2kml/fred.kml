@@ -1,0 +1,589 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <Style id="dotIcon0">
+       <IconStyle>
+         <color>FF000000</color>
+         <colorMode>normal</colorMode>
+         <scale>1.00</scale>
+         <Icon><href>dot.png</href></Icon>
+       </IconStyle>
+    </Style>
+
+    <Style id="dotIcon1">
+       <IconStyle>
+         <color>FF0000FF</color>
+         <colorMode>normal</colorMode>
+         <scale>1.00</scale>
+         <Icon><href>dot.png</href></Icon>
+       </IconStyle>
+    </Style>
+
+    <Style id="dotIcon2">
+       <IconStyle>
+         <color>FF00FFFF</color>
+         <colorMode>normal</colorMode>
+         <scale>1.00</scale>
+         <Icon><href>dot.png</href></Icon>
+       </IconStyle>
+    </Style>
+
+    <Style id="dotIcon3">
+       <IconStyle>
+         <color>FF00FF00</color>
+         <colorMode>normal</colorMode>
+         <scale>1.00</scale>
+         <Icon><href>dot.png</href></Icon>
+       </IconStyle>
+    </Style>
+
+    <Style id="pathNormal">
+      <LineStyle>
+        <color>FF0000FF</color>
+        <colorMode>normal</colorMode>
+        <width>2.00</width>
+      </LineStyle>
+    </Style>
+
+    <Placemark>
+      <styleUrl>#dotIcon2</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 52 dBuV</br>
+          <br>CNR: 20 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673201,54.098301</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon2</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 51 dBuV</br>
+          <br>CNR: 18 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673210,54.098298</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673201,54.098301 -4.673210,54.098298
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon2</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 51 dBuV</br>
+          <br>CNR: 18 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673222,54.098293</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673210,54.098298 -4.673222,54.098293
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon2</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 52 dBuV</br>
+          <br>CNR: 18 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673224,54.098284</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673222,54.098293 -4.673224,54.098284
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon2</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 51 dBuV</br>
+          <br>CNR: 18 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673223,54.098287</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673224,54.098284 -4.673223,54.098287
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon2</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 51 dBuV</br>
+          <br>CNR: 18 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673226,54.098291</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673223,54.098287 -4.673226,54.098291
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon3</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 51 dBuV</br>
+          <br>CNR: 21 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673229,54.098290</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673226,54.098291 -4.673229,54.098290
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon2</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 51 dBuV</br>
+          <br>CNR: 18 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673227,54.098288</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673229,54.098290 -4.673227,54.098288
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon3</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 51 dBuV</br>
+          <br>CNR: 21 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673223,54.098287</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673227,54.098288 -4.673223,54.098287
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon2</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 51 dBuV</br>
+          <br>CNR: 18 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673209,54.098288</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673223,54.098287 -4.673209,54.098288
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon3</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 51 dBuV</br>
+          <br>CNR: 21 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673210,54.098289</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673209,54.098288 -4.673210,54.098289
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon2</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 51 dBuV</br>
+          <br>CNR: 18 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673223,54.098288</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673210,54.098289 -4.673223,54.098288
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon3</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 51 dBuV</br>
+          <br>CNR: 21 dB</br>
+          <br>SNR: 15 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673225,54.098295</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673223,54.098288 -4.673225,54.098295
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon2</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 51 dBuV</br>
+          <br>CNR: 18 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673234,54.098288</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673225,54.098295 -4.673234,54.098288
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon3</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 52 dBuV</br>
+          <br>CNR: 21 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673244,54.098282</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673234,54.098288 -4.673244,54.098282
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon2</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 52 dBuV</br>
+          <br>CNR: 18 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673248,54.098293</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673244,54.098282 -4.673248,54.098293
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon3</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 51 dBuV</br>
+          <br>CNR: 21 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673248,54.098308</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673248,54.098293 -4.673248,54.098308
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon3</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 51 dBuV</br>
+          <br>CNR: 21 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673245,54.098296</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673248,54.098308 -4.673245,54.098296
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#dotIcon3</styleUrl>
+      <description>
+        <![CDATA[
+          <h1>BBC National DAB</h1>
+          <br>Frequency: 225.648 MHz (12B)</br>
+          <br>RSSI: 51 dBuV</br>
+          <br>CNR: 21 dB</br>
+          <br>SNR: 16 dB</br>
+          <br>FIC quality: 100 %</br>
+        ]]>
+      </description>
+      <Point>
+        <coordinates>-4.673237,54.098302</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <styleUrl>#pathNormal</styleUrl>
+      <MultiGeometry>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            -4.673245,54.098296 -4.673237,54.098302
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+
+  </Document>
+</kml>
+

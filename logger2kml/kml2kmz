@@ -1,0 +1,5 @@
+#!/bin/sh
+
+./logger2kml fred.log > fred.kml
+zip fred.kmz fred.kml dot.png
+cp fred.kmz ~dietpi

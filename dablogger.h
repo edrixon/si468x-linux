@@ -2,21 +2,19 @@
 
 #define __GOT_LOGGER
 
-#define LOGGER_INIT    0
-#define LOGGER_TUNE    1
-#define LOGGER_MEASURE 2
-#define LOGGER_STARTWAIT 3
-
 #define LOG_RESTART_TICKS 1500
 
+int dabGetLoggerMode(void);
 void dabControlLogger(void);
-void dabLogger(void);
+void dabLoggerMain(void);
 void dabLoggerTune(void);
 void dabLoggerMeasure(void);
 void dabInitLogger(void);
 void dabStartLogger(void);
 void dabStopLogger(void);
 int dabLoggerRunning(void);
+int dabLoggerSetRunMode(int);
+void dabLoggerCoverage(void);
 
 
 #endif

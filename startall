@@ -1,0 +1,16 @@
+#!/bin/sh
+
+cd /root/dab
+
+gpsd -n /dev/ttyACM0
+
+nohup ./dab 2> /tmp/dab.pid | \
+      ./mcast/mcast-tx 1 &
+nohup ./telnet/telnetd 2> /tmp/telnetd.pid | \
+      ./mcast/mcast-tx 2 &
+nohup ./httpd/httpd 2> /tmp/httpd.pid | \
+      ./mcast/mcast-tx 3 &
+nohup ./gps/dabgps 2> /tmp/dabgps.pid | \
+      ./mcast/mcast-tx 4 &
+
+./darkice/startdark
