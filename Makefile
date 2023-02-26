@@ -16,4 +16,3 @@ $(EXEC): $(OBJS)
 clean:
 	rm -f $(OBJS)
 	rm -f $(EXEC)
-	rm dabrx.config
