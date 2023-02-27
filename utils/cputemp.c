@@ -9,6 +9,7 @@ int main(int argc, char *argv[])
     char tempStr[32];
     double temp;
     int keepGoing;
+    int c;
 
     keepGoing = 0;
 
@@ -29,7 +30,6 @@ int main(int argc, char *argv[])
         if(fscanf(fp, "%s", tempStr) == 1)
         {
             temp = (double)(atoi(tempStr)) / 1000.0;
-            printf("CPU temperature = %0.1lf degrees\n", temp);
         }
         else
         {
@@ -40,7 +40,22 @@ int main(int argc, char *argv[])
 
         if(keepGoing == 1)
         {
+            printf("%0.1lf :", temp);
+            c = ((temp - 30) * 5) - 20;
+            while(c > 0)
+            {
+                printf("*");
+                c--;
+            }
+            printf("\n");
+
+//            printf("%d\n", c);
+
             sleep(10);
+        }
+        else
+        {
+            printf("CPU temperature = %0.1lf degrees\n", temp);
         }
     }
     while(keepGoing == 1);

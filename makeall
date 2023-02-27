@@ -4,8 +4,6 @@ DIRS=". gps telnet httpd mcast logger2kml"
 
 here=`pwd`
 
-make hexdump
-
 for d in $DIRS
 do
     cd $here/$d

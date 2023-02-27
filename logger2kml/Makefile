@@ -7,4 +7,4 @@ $(BIN): $(SRC)
 	$(GCC) $(GCCFLAGS) $(SRC) -o $(BIN)
 
 clean:
-	rm $(BIN)
+	rm -f $(BIN)
