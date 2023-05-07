@@ -1,5 +1,7 @@
 This is my Si468x based DAB receiver for Linux
 
+Built to run on DietPi minimal Linux distro
+
 Hardware is a Raspberry Pi 4, a DABShield radio board, PCF2127 based RTC,
 USB sound card, USB GPS  and some LEDs.
 
